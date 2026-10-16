@@ -13,6 +13,7 @@ import `in`.soumyaranjansahoo.dockdrop.DockDropApp
 import `in`.soumyaranjansahoo.dockdrop.core.model.DropProgress
 import `in`.soumyaranjansahoo.dockdrop.core.model.DropState
 import `in`.soumyaranjansahoo.dockdrop.core.model.PauseReason
+import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -31,6 +32,8 @@ class DropService : Service() {
         const val ACTION_RESUME_DROP = "in.soumyaranjansahoo.dockdrop.action.RESUME_DROP"
         const val ACTION_PAUSE_DROP = "in.soumyaranjansahoo.dockdrop.action.PAUSE_DROP"
         const val ACTION_STOP_DROP = "in.soumyaranjansahoo.dockdrop.action.STOP_DROP"
+        const val ACTION_START_RESTORE = "in.soumyaranjansahoo.dockdrop.action.START_RESTORE"
+        const val ACTION_STOP_RESTORE = "in.soumyaranjansahoo.dockdrop.action.STOP_RESTORE"
         const val ACTION_DEBUG_FORCE_TIMEOUT = "in.soumyaranjansahoo.dockdrop.action.DEBUG_FORCE_TIMEOUT"
 
         const val EXTRA_SET_ID = "extra_set_id"
@@ -98,6 +101,19 @@ class DropService : Service() {
 
             ACTION_STOP_DROP -> {
                 engine.stop()
+                releaseWakeLock()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+
+            ACTION_START_RESTORE -> {
+                startForegroundWithProperType()
+                acquireWakeLock()
+                observeRestoreState()
+            }
+
+            ACTION_STOP_RESTORE -> {
+                app.container.restoreEngine.stop()
                 releaseWakeLock()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -191,6 +207,49 @@ class DropService : Service() {
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
                     }
+                }
+            }
+        }
+    }
+
+    private fun observeRestoreState() {
+        val restoreEngine = app.container.restoreEngine
+        stateObservationJob?.cancel()
+        stateObservationJob = serviceScope.launch {
+            restoreEngine.state.collect { state ->
+                when (state) {
+                    is RestoreState.Restoring -> {
+                        val spec = NotificationSpec(
+                            channelId = DropNotificationMapper.CHANNEL_PROGRESS,
+                            notificationId = DropNotificationMapper.NOTIF_ID_PROGRESS,
+                            title = "Restoring · ${state.progress.percentage}%",
+                            text = "${state.progress.currentFolder} · ${state.progress.restoredFiles} of ${state.progress.totalFiles}",
+                            isOngoing = true,
+                            progress = state.progress.percentage,
+                            maxProgress = 100
+                        )
+                        notificationManager.postNotification(spec)
+                    }
+
+                    is RestoreState.UpdatingGallery -> {
+                        val spec = NotificationSpec(
+                            channelId = DropNotificationMapper.CHANNEL_PROGRESS,
+                            notificationId = DropNotificationMapper.NOTIF_ID_PROGRESS,
+                            title = "Updating gallery…",
+                            text = "Registering restored photos and videos",
+                            isOngoing = true,
+                            isIndeterminate = true
+                        )
+                        notificationManager.postNotification(spec)
+                    }
+
+                    is RestoreState.Completed, is RestoreState.Partial -> {
+                        releaseWakeLock()
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    }
+
+                    else -> {}
                 }
             }
         }

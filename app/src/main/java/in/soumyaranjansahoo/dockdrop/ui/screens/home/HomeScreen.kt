@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +53,7 @@ fun HomeScreen(
     onStartDropClick: (SetDefinition) -> Unit,
     onNavigateToDrop: () -> Unit,
     onNavigateToReceipt: () -> Unit,
+    onNavigateToRestore: () -> Unit = {},
     onOpenKeepAliveClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -61,93 +63,132 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         bottomBar = {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                    .background(colors.surface)
+                    .border(1.dp, colors.outline)
             ) {
-                when {
-                    sets.isEmpty() -> {
-                        Button(
-                            onClick = onCreateSetClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.dock,
-                                contentColor = colors.onDock
-                            )
-                        ) {
-                            Text("Create your first backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    when {
+                        sets.isEmpty() -> {
+                            Button(
+                                onClick = onCreateSetClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.dock,
+                                    contentColor = colors.onDock
+                                )
+                            ) {
+                                Text("Create your first backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
-                    }
 
-                    dropState is DropState.Dropping || dropState is DropState.Verifying -> {
-                        Button(
-                            onClick = onNavigateToDrop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.dock,
-                                contentColor = colors.onDock
-                            )
-                        ) {
-                            Text("View live backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        dropState is DropState.Dropping || dropState is DropState.Verifying -> {
+                            Button(
+                                onClick = onNavigateToDrop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.dock,
+                                    contentColor = colors.onDock
+                                )
+                            ) {
+                                Text("View live backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
-                    }
 
-                    dropState is DropState.Sealed || dropState is DropState.Partial -> {
-                        Button(
-                            onClick = onNavigateToReceipt,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (dropState is DropState.Sealed) colors.seal else colors.attention,
-                                contentColor = colors.onDock
-                            )
-                        ) {
-                            Text("View Receipt", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        dropState is DropState.Sealed || dropState is DropState.Partial -> {
+                            Button(
+                                onClick = onNavigateToReceipt,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (dropState is DropState.Sealed) colors.seal else colors.attention,
+                                    contentColor = colors.onDock
+                                )
+                            ) {
+                                Text("View Receipt", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
-                    }
 
-                    dropState is DropState.DockDetected || dropState is DropState.AwaitingConfirm -> {
-                        val activeSet = sets.first()
-                        Button(
-                            onClick = { onStartDropClick(activeSet) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.dock,
-                                contentColor = colors.onDock
-                            )
-                        ) {
-                            Text("Back up now", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        dropState is DropState.DockDetected || dropState is DropState.AwaitingConfirm -> {
+                            val activeSet = sets.first()
+                            Button(
+                                onClick = { onStartDropClick(activeSet) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.dock,
+                                    contentColor = colors.onDock
+                                )
+                            ) {
+                                Text("Back up now", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
-                    }
 
-                    else -> {
-                        Button(
-                            onClick = { /* disabled */ },
-                            enabled = false,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                disabledContainerColor = colors.surfaceRaised,
-                                disabledContentColor = colors.textTertiary
-                            )
-                        ) {
-                            Text("Plug in your SSD", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        else -> {
+                            Button(
+                                onClick = { /* disabled */ },
+                                enabled = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    disabledContainerColor = colors.surfaceRaised,
+                                    disabledContentColor = colors.textTertiary
+                                )
+                            ) {
+                                Text("Plug in your SSD", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            }
                         }
                     }
+                }
+
+                HorizontalDivider(color = colors.outline)
+
+                // Bottom bar: Home · Restore · Settings (SCREENS.md §1)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Home",
+                        style = DockBody.copy(color = colors.dock, fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = "Restore",
+                        style = DockBody.copy(color = colors.textSecondary, fontWeight = FontWeight.Normal),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onNavigateToRestore() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                    Text(
+                        text = "Settings",
+                        style = DockBody.copy(color = colors.textSecondary, fontWeight = FontWeight.Normal),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onOpenKeepAliveClick() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
             }
         }

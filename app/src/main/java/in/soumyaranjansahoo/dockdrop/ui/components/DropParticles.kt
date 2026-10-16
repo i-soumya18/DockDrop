@@ -44,6 +44,7 @@ fun DropParticles(
     filesPerSec: Double,
     isReducedMotion: Boolean = false,
     currentFileName: String = "",
+    reverseDirection: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
@@ -131,11 +132,11 @@ fun DropParticles(
         for (p in particles) {
             val prog = p.progress
             // Gentle cubic bezier-like S-curve
-            val currentY = startY + (endY - startY) * prog
+            val currentY = if (reverseDirection) endY - (endY - startY) * prog else startY + (endY - startY) * prog
             val wave = sin(prog * Math.PI.toFloat()) * p.xCurveOffset
             val currentX = startX + wave
 
-            // Shrink as particle enters dock port (last 15% of progress)
+            // Shrink as particle enters port/destination (last 15% of progress)
             val scale = if (prog > 0.85f) ((1f - prog) / 0.15f).coerceIn(0.2f, 1f) else 1f
 
             drawCircle(

@@ -46,6 +46,21 @@ class AppContainer(val context: Context) {
         DropNotificationManager(context)
     }
 
+    val restorePlanner: `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner by lazy {
+        `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner(
+            storageGateway = storageGateway,
+            manifestRepository = manifestRepository
+        )
+    }
+
+    val restoreEngine: `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreEngine by lazy {
+        `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreEngine(
+            storageGateway = storageGateway,
+            context = context,
+            scope = applicationScope
+        )
+    }
+
     val dockMonitor: DockMonitor by lazy {
         DockMonitor(
             context = context,

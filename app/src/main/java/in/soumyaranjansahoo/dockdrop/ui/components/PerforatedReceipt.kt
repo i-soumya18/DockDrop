@@ -49,6 +49,7 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusLg
 fun PerforatedReceiptCard(
     receipt: Receipt,
     onDone: () -> Unit,
+    onTestRestoreClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
@@ -152,6 +153,19 @@ fun PerforatedReceiptCard(
                 )
             ) {
                 Text("Done", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+            }
+
+            if (onTestRestoreClick != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onTestRestoreClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Test a restore", style = DockBodySmall, color = colors.dock)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

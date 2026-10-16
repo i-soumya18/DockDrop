@@ -17,6 +17,7 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 fun ReceiptScreen(
     receipt: Receipt,
     onDone: () -> Unit,
+    onTestRestoreClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
@@ -34,7 +35,8 @@ fun ReceiptScreen(
         ) {
             PerforatedReceiptCard(
                 receipt = receipt,
-                onDone = onDone
+                onDone = onDone,
+                onTestRestoreClick = onTestRestoreClick
             )
         }
     }

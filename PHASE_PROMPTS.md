@@ -10,8 +10,8 @@
 | 0 | Spikes on the Galaxy A14 | **COMPLETE** (completed 2026-10-16) | — (`docs/spikes/PHASE0_RESULTS.md`) | A1, A2, A7 (Spike Lab only), A8 |
 | 1 | Manual backup MVP | **COMPLETE** (completed 2026-10-16) | — (commit `72e5eb1`) | A1, A3, A4, A7, A8 |
 | 2 | Auto trigger & foreground service | **COMPLETE** (completed 2026-10-16) | — (Phase 2 deliverables verified) | A2, A3, A7, A8 |
-| 3 | Restore | **READY** (unblocked 2026-10-16) | Unblocked (Phase 1 & 2 complete; manifest reader ready) | A5, A4, A7, A8 |
-| 4 | Policies & encryption | Not started | Phase 3 complete (restore must exist to test) | A4, A6, A7, A8 |
+| 3 | Restore | **COMPLETE** (completed 2026-10-16) | — (Phase 3 deliverables verified) | A5, A4, A7, A8 |
+| 4 | Policies & encryption | **READY** (unblocked 2026-10-16) | Unblocked (Phase 3 complete; restore engine & drills verified) | A4, A6, A7, A8 |
 | 5 | Play readiness & polish | Not started | Phase 4 complete | A7, A8 |
 
 ---
@@ -180,11 +180,12 @@ Plus: the Phase 0 trigger matrix scenarios that ADR-001 marks "supported" pass i
 ---
 
 <details>
-<summary><strong>PHASE 3 — Restore (READY)</strong></summary>
+<summary><strong>PHASE 3 — Restore (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 1 & 2 complete; single manifest reader ready).
+- **Status:** Complete (completed 2026-10-16) · **Blocked on:** — (Phase 3 deliverables verified).
 - **Goal:** restore everything with one hold, restore parts with preview, new-phone flow, restore drill.
+- **Deliverables completed:** S12-S16 (RestoreHub, Browser, Preview, Progress, New Phone), restore drill, restore receipt, README section "Restore without DockDrop", 31 unit tests passing.
 
 ### Prompt
 Build restore as a first-class feature, reusing the Drop screen components in reverse.
@@ -210,10 +211,10 @@ Build restore as a first-class feature, reusing the Drop screen components in re
 ---
 
 <details>
-<summary><strong>PHASE 4 — Policies & encryption (Not started)</strong></summary>
+<summary><strong>PHASE 4 — Policies & encryption (READY)</strong></summary>
 
 ### Current Status
-- **Status:** Not started · **Blocked on:** Phase 3 complete (restore must exist to prove encrypted backups).
+- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 3 complete; restore engine & drills verified).
 - **Goal:** "Keep N days" and "Mirror exactly" with the mass-delete guard; optional per-Set encryption with recovery key.
 
 ### Prompt

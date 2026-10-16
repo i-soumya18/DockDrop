@@ -19,6 +19,8 @@ import `in`.soumyaranjansahoo.dockdrop.core.service.DropService
 import `in`.soumyaranjansahoo.dockdrop.ui.navigation.AppNavGraph
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockDropTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.HapticFeedbackController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -103,6 +105,23 @@ class MainActivity : ComponentActivity() {
                     onStopDropInService = {
                         val serviceIntent = Intent(this@MainActivity, DropService::class.java).apply {
                             action = DropService.ACTION_STOP_DROP
+                        }
+                        startService(serviceIntent)
+                    },
+                    onStartRestoreInService = { plan ->
+                        val serviceIntent = Intent(this@MainActivity, DropService::class.java).apply {
+                            action = DropService.ACTION_START_RESTORE
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
+                        container.restoreEngine.executeRestore(plan)
+                    },
+                    onStopRestoreInService = {
+                        val serviceIntent = Intent(this@MainActivity, DropService::class.java).apply {
+                            action = DropService.ACTION_STOP_RESTORE
                         }
                         startService(serviceIntent)
                     },

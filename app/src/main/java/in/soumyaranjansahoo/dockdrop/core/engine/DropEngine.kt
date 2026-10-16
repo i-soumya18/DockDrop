@@ -525,16 +525,23 @@ class DropEngine(
             }
 
             var keptDeletionsCount = 0
+            val dateFolder = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val deletedEntryUpdates = mutableMapOf<String, ManifestEntry>()
+
             if (deletedFromPhone.isNotEmpty()) {
-                val dateFolder = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                 for (del in deletedFromPhone) {
                     val srcRelVaultPath = "${set.name}/${del.path}"
                     val dstRelVaultPath = "_deleted/${set.name}/$dateFolder/${del.path}"
                     try {
                         storageGateway.move(vaultUri, srcRelVaultPath, dstRelVaultPath)
                         keptDeletionsCount++
+                        deletedEntryUpdates[del.path] = del.copy(
+                            status = "deleted",
+                            deletedDate = dateFolder,
+                            deletedPath = dstRelVaultPath
+                        )
                     } catch (e: Exception) {
-                        // ignore or record
+                        deletedEntryUpdates[del.path] = del.copy(status = "deleted")
                     }
                 }
             }
@@ -545,7 +552,7 @@ class DropEngine(
             for ((p, e) in manifestEntries) {
                 if (!currentSourcePaths.contains(p)) {
                     // Marked as deleted
-                    updatedManifestEntries[p] = e.copy(status = "deleted")
+                    updatedManifestEntries[p] = deletedEntryUpdates[p] ?: e.copy(status = "deleted")
                 } else {
                     updatedManifestEntries[p] = e
                 }
@@ -560,6 +567,22 @@ class DropEngine(
                 setId = set.id,
                 allEntries = updatedManifestEntries.values.toList()
             )
+
+            // Write Set metadata for cross-device & new-phone discovery
+            try {
+                manifestRepository.writeSetMetadata(
+                    vaultTreeUri = vaultUri,
+                    metadata = `in`.soumyaranjansahoo.dockdrop.core.manifest.SetMetadata(
+                        setId = set.id,
+                        setName = set.name,
+                        sourceLabels = sourceFolders.map { it.label },
+                        updatedAtMs = System.currentTimeMillis(),
+                        isEncrypted = set.isEncrypted
+                    )
+                )
+            } catch (e: Exception) {
+                // non-fatal
+            }
 
             // Stage 6: Sealed Receipt (S10)
             val elapsedTotalSec = maxOf(1L, (System.currentTimeMillis() - startTimeMs) / 1000L)

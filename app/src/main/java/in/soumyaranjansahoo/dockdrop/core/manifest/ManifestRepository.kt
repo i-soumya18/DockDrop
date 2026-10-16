@@ -46,6 +46,83 @@ open class ManifestRepository(
     }
 
     /**
+     * Reads `.dockdrop/drive.json` if it exists, without auto-creating one.
+     */
+    suspend fun readDriveInfo(vaultTreeUri: Uri): DriveInfo? = withContext(Dispatchers.IO) {
+        val relPath = ".dockdrop/drive.json"
+        val existingText = storageGateway.readText(vaultTreeUri, relPath) ?: return@withContext null
+        try {
+            json.decodeFromString<DriveInfo>(existingText)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Writes optional set metadata so other devices and clean installs can discover the set name and folders.
+     */
+    suspend fun writeSetMetadata(vaultTreeUri: Uri, metadata: SetMetadata): Boolean = withContext(Dispatchers.IO) {
+        val relPath = ".dockdrop/sets/${metadata.setId}/set.json"
+        val text = json.encodeToString(metadata)
+        storageGateway.writeTextAtomic(vaultTreeUri, relPath, text)
+    }
+
+    /**
+     * Reads set metadata if available.
+     */
+    suspend fun readSetMetadata(vaultTreeUri: Uri, setId: String): SetMetadata? = withContext(Dispatchers.IO) {
+        val relPath = ".dockdrop/sets/$setId/set.json"
+        val text = storageGateway.readText(vaultTreeUri, relPath) ?: return@withContext null
+        try {
+            json.decodeFromString<SetMetadata>(text)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Discovers all backup Sets and their active generations on the Vault drive.
+     * Used by S12 Restore Hub and S16 New-Phone restore.
+     */
+    suspend fun discoverBackupsOnDrive(vaultTreeUri: Uri): List<DiscoveredBackupSet> = withContext(Dispatchers.IO) {
+        val driveInfo = readDriveInfo(vaultTreeUri) ?: return@withContext emptyList()
+        val setDirNames = storageGateway.listChildDirectories(vaultTreeUri, ".dockdrop/sets")
+        val result = mutableListOf<DiscoveredBackupSet>()
+
+        for (setId in setDirNames) {
+            val generation = loadCurrentGeneration(vaultTreeUri, setId)
+            if (generation.generationNumber <= 0L && generation.entries.isEmpty()) {
+                continue
+            }
+            val metadata = readSetMetadata(vaultTreeUri, setId)
+
+            // Infer source labels if not in metadata
+            val inferredSourceLabels = if (metadata != null && metadata.sourceLabels.isNotEmpty()) {
+                metadata.sourceLabels
+            } else {
+                generation.entries.keys.map { it.substringBefore("/") }.distinct()
+            }
+
+            val setName = metadata?.setName ?: "Backup ($setId)"
+            val lastModified = generation.entries.values.maxOfOrNull { it.modifiedMs } ?: driveInfo.createdAt
+
+            result.add(
+                DiscoveredBackupSet(
+                    setId = setId,
+                    setName = setName,
+                    deviceLabel = driveInfo.deviceLabel,
+                    driveId = driveInfo.driveId,
+                    generation = generation,
+                    sourceLabels = inferredSourceLabels,
+                    lastModifiedMs = lastModified,
+                    isEncrypted = metadata?.isEncrypted ?: false
+                )
+            )
+        }
+        result
+    }
+
+    /**
      * Loads the active generation for a Set.
      * Follows HEAD, verifies against .sha256, and falls back to previous valid generation if HEAD is corrupt.
      */

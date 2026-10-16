@@ -1,11 +1,14 @@
 package `in`.soumyaranjansahoo.dockdrop.core.storage
 
 import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.StatFs
 import android.os.storage.StorageManager
 import android.provider.DocumentsContract
 import kotlinx.coroutines.Dispatchers
@@ -420,6 +423,106 @@ class SafStorageGateway(
         } catch (e: Exception) {
             delete(vaultTreeUri, "$testFileName.part")
             30.0 // reasonable default
+        }
+    }
+
+    override suspend fun phoneFreeBytes(): Long = withContext(Dispatchers.IO) {
+        try {
+            val stat = StatFs(Environment.getDataDirectory().absolutePath)
+            stat.availableBytes
+        } catch (e: Exception) {
+            10L * 1024 * 1024 * 1024 // 10 GB fallback
+        }
+    }
+
+    override suspend fun listChildDirectories(treeUri: Uri, relativePath: String): List<String> = withContext(Dispatchers.IO) {
+        val rootDocId = DocumentsContract.getTreeDocumentId(treeUri)
+        val targetDocId = if (relativePath.isEmpty()) {
+            rootDocId
+        } else {
+            findSubdirectory(treeUri, rootDocId, relativePath) ?: return@withContext emptyList()
+        }
+
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, targetDocId)
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE
+        )
+        val dirs = mutableListOf<String>()
+        try {
+            contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+                val nameCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeCol = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameCol) ?: continue
+                    val mime = cursor.getString(mimeCol) ?: ""
+                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
+                        dirs.add(name)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // return partial or empty
+        }
+        dirs
+    }
+
+    override suspend fun setLastModified(treeUri: Uri, relativePath: String, lastModifiedMs: Long): Boolean = withContext(Dispatchers.IO) {
+        if (lastModifiedMs <= 0L) return@withContext false
+        var success = false
+
+        // Attempt 1: Direct File path if primary storage tree
+        try {
+            val docId = DocumentsContract.getTreeDocumentId(treeUri)
+            if (docId.startsWith("primary:")) {
+                val subPath = docId.removePrefix("primary:")
+                val basePath = Environment.getExternalStorageDirectory().absolutePath
+                val fullRelPath = if (subPath.isEmpty()) relativePath else "$subPath/$relativePath"
+                val file = File(basePath, fullRelPath)
+                if (file.exists()) {
+                    success = file.setLastModified(lastModifiedMs)
+                }
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+
+        // Attempt 2: DocumentsContract update if available
+        if (!success) {
+            try {
+                val docUri = findDocumentUri(treeUri, relativePath)
+                if (docUri != null) {
+                    val values = ContentValues().apply {
+                        put(DocumentsContract.Document.COLUMN_LAST_MODIFIED, lastModifiedMs)
+                    }
+                    val updated = contentResolver.update(docUri, values, null, null)
+                    success = updated > 0
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+
+        success
+    }
+
+    override suspend fun triggerMediaScan(treeUri: Uri, relativePaths: List<String>) = withContext(Dispatchers.IO) {
+        try {
+            val docId = DocumentsContract.getTreeDocumentId(treeUri)
+            if (docId.startsWith("primary:")) {
+                val subPath = docId.removePrefix("primary:")
+                val basePath = Environment.getExternalStorageDirectory().absolutePath
+                val filePaths = relativePaths.map { rel ->
+                    val fullRel = if (subPath.isEmpty()) rel else "$subPath/$rel"
+                    File(basePath, fullRel).absolutePath
+                }.filter { File(it).exists() }
+
+                if (filePaths.isNotEmpty()) {
+                    MediaScannerConnection.scanFile(context, filePaths.toTypedArray(), null, null)
+                }
+            }
+        } catch (e: Exception) {
+            // Media scan is non-fatal
         }
     }
 

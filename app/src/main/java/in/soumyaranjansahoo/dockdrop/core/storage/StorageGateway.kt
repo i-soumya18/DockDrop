@@ -119,4 +119,25 @@ interface StorageGateway {
      * Runs a quick write test (e.g. 16 MB or 4 MB temp file) and returns throughput in MB/s.
      */
     suspend fun runWriteSpeedTest(vaultTreeUri: Uri, testSizeBytes: Long = 8 * 1024 * 1024L): Double
+
+    /**
+     * Lists child directory names immediately under relativePath.
+     */
+    suspend fun listChildDirectories(treeUri: Uri, relativePath: String = ""): List<String>
+
+    /**
+     * Queries internal device storage free bytes available for application writes.
+     */
+    suspend fun phoneFreeBytes(): Long
+
+    /**
+     * Attempts best-effort preservation of original modification time on a restored file.
+     * Returns true if successfully preserved.
+     */
+    suspend fun setLastModified(treeUri: Uri, relativePath: String, lastModifiedMs: Long): Boolean
+
+    /**
+     * Triggers platform media scanner for restored files so gallery and photo apps update immediately.
+     */
+    suspend fun triggerMediaScan(treeUri: Uri, relativePaths: List<String>)
 }

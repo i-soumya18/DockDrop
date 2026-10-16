@@ -90,6 +90,10 @@ class ManifestCommitFaultTest {
             VolumeInfo("4E21-0000", "SSD", 128L * 1024 * 1024 * 1024, 100L * 1024 * 1024 * 1024, "exFAT", true)
         override fun hasPersistedPermission(treeUri: Uri): Boolean = true
         override suspend fun runWriteSpeedTest(vaultTreeUri: Uri, testSizeBytes: Long): Double = 35.9
+        override suspend fun listChildDirectories(treeUri: Uri, relativePath: String): List<String> = emptyList()
+        override suspend fun phoneFreeBytes(): Long = 50L * 1024 * 1024 * 1024
+        override suspend fun setLastModified(treeUri: Uri, relativePath: String, lastModifiedMs: Long): Boolean = true
+        override suspend fun triggerMediaScan(treeUri: Uri, relativePaths: List<String>) {}
     }
 
     private val fakeUri: Uri = android.net.TestUri()
