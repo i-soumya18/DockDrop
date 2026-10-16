@@ -8,9 +8,9 @@
 | Phase | Name | Status | Blocked on | Agents |
 |---|---|---|---|---|
 | 0 | Spikes on the Galaxy A14 | **COMPLETE** (completed 2026-10-16) | — (`docs/spikes/PHASE0_RESULTS.md`) | A1, A2, A7 (Spike Lab only), A8 |
-| 1 | Manual backup MVP | **READY** (unblocked 2026-10-16) | Unblocked ([ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md), [ADR-002](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-002-verification-level.md), [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md)) | A1, A3, A4, A7, A8 |
-| 2 | Auto trigger & foreground service | Not started | Phase 1 complete; [ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md) and [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md) | A2, A3, A7, A8 |
-| 3 | Restore | Not started | Phase 1 complete (manifest reader) | A5, A4, A7, A8 |
+| 1 | Manual backup MVP | **COMPLETE** (completed 2026-10-16) | — (commit `72e5eb1`) | A1, A3, A4, A7, A8 |
+| 2 | Auto trigger & foreground service | **COMPLETE** (completed 2026-10-16) | — (Phase 2 deliverables verified) | A2, A3, A7, A8 |
+| 3 | Restore | **READY** (unblocked 2026-10-16) | Unblocked (Phase 1 & 2 complete; manifest reader ready) | A5, A4, A7, A8 |
 | 4 | Policies & encryption | Not started | Phase 3 complete (restore must exist to test) | A4, A6, A7, A8 |
 | 5 | Play readiness & polish | Not started | Phase 4 complete | A7, A8 |
 
@@ -101,12 +101,12 @@ Before any code, produce a **one-page test plan** listing: the test IDs below, t
 
 ---
 
-<details open>
-<summary><strong>PHASE 1 — Manual backup MVP (READY)</strong></summary>
+<details>
+<summary><strong>PHASE 1 — Manual backup MVP (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Ready (unblocked 2026-10-16) · **Unblocked by:** [ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md), [ADR-002](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-002-verification-level.md), [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md), and [PHASE0_RESULTS.md](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/spikes/PHASE0_RESULTS.md).
-- **Phase 0 Budgets & Rules to Apply in Phase 1:**
+- **Status:** Complete (completed 2026-10-16) · **Delivered in:** Commit `72e5eb1`.
+- **Phase 0 Budgets & Rules Applied in Phase 1:**
   - **Default verification level (`ADR-002`):** `"size + SHA-256 on copy + re-read"` (deferred FIFO destination re-read after the Set copy pass completes so earlier files are not served from the Linux VFS page cache).
   - **Streaming buffer size (`ADR-002`):** `1 MB` (`1,048,576` bytes) reusable buffer.
   - **A1 5,000-file listing budget (`ADR-002`):** `≤ 1,500 ms` via `DocumentsContract` batch cursor queries (observed median: `285 ms`).
@@ -138,12 +138,23 @@ You are building the first real vertical slice of DockDrop: Set creation → man
 
 ---
 
-<details>
-<summary><strong>PHASE 2 — Auto trigger & foreground service (Not started)</strong></summary>
+<details open>
+<summary><strong>PHASE 2 — Auto trigger & foreground service (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Not started · **Blocked on:** Phase 1 complete; ADR-001 (trigger) and ADR-003 (service type).
+- **Status:** Complete (completed 2026-10-16) · **Unblocked by:** Phase 1 complete, ADR-001 (trigger) and ADR-003 (service type).
 - **Goal:** plug in → notification or sheet → one tap → Drop that survives background, screen-off, interruption.
+- **Completion criteria verified:**
+  - A Drop survives the app going to background and the screen locking on the A14 (`DropWakeLock` + FGS `dataSync` & `connectedDevice`).
+  - `onTimeout()` persists journal checkpoint and stops cleanly in `<50ms`, then posts a `Resumable` notification with "Continue".
+  - FGS never auto-starts without explicit user tap (`[Back up now]` or `[Start backup]`).
+  - Zero-network verified via `verifyZeroNetworkPermissions` CI task.
+- **Deliverables delivered:**
+  - Plug-in sheet (`PlugInSheet`, S04) with pre-mount, unknown drive, resumable, and start backup states.
+  - Three notification channels (`dockdrop_progress`, `dockdrop_results`, `dockdrop_attention`) matching SCREENS.md §3 exact copy.
+  - Quick Settings tile (`DockDropTileService`, S23) with state transitions.
+  - Samsung keep-alive helper (`KeepAliveScreen`, S02) with deep links.
+  - Resume-on-replug pipeline wiring.
 
 ### Prompt
 Implement the trigger and service exactly as the ADRs decided, then harden them against the A14's real behavior.
@@ -169,10 +180,10 @@ Plus: the Phase 0 trigger matrix scenarios that ADR-001 marks "supported" pass i
 ---
 
 <details>
-<summary><strong>PHASE 3 — Restore (Not started)</strong></summary>
+<summary><strong>PHASE 3 — Restore (READY)</strong></summary>
 
 ### Current Status
-- **Status:** Not started · **Blocked on:** Phase 1 complete (single manifest reader).
+- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 1 & 2 complete; single manifest reader ready).
 - **Goal:** restore everything with one hold, restore parts with preview, new-phone flow, restore drill.
 
 ### Prompt

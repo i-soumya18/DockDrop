@@ -29,6 +29,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStream
@@ -42,11 +43,23 @@ import java.util.UUID
 class DropEngine(
     private val storageGateway: StorageGateway,
     private val manifestRepository: ManifestRepository,
-    private val database: DropDatabase,
+    private val journalDao: `in`.soumyaranjansahoo.dockdrop.core.database.JournalDao,
     private val setRepository: SetRepository,
     private val scope: CoroutineScope
 ) {
-    private val journalDao = database.journalDao()
+    constructor(
+        storageGateway: StorageGateway,
+        manifestRepository: ManifestRepository,
+        database: DropDatabase,
+        setRepository: SetRepository,
+        scope: CoroutineScope
+    ) : this(
+        storageGateway = storageGateway,
+        manifestRepository = manifestRepository,
+        journalDao = database.journalDao(),
+        setRepository = setRepository,
+        scope = scope
+    )
 
     private val _state = MutableStateFlow<DropState>(DropState.NoDock)
     val state: StateFlow<DropState> = _state.asStateFlow()
@@ -61,6 +74,20 @@ class DropEngine(
                 val current = _state.value
                 val prog = when (current) {
                     is DropState.Dropping -> current.progress
+                    is DropState.Verifying -> DropProgress(
+                        setId = "",
+                        currentFolder = current.currentFolder,
+                        folderIndex = current.folderIndex,
+                        totalFolders = current.totalFolders,
+                        copiedFiles = current.verifiedFiles,
+                        totalFiles = current.totalFiles,
+                        copiedBytes = 0L,
+                        totalBytes = 0L,
+                        speedMbS = 0.0,
+                        filesPerSec = 0.0,
+                        estMinutesRemaining = 0.0,
+                        currentFilePath = ""
+                    )
                     else -> null
                 }
                 activeJob?.cancel()
@@ -86,6 +113,38 @@ class DropEngine(
                 _state.value = DropState.Resumable(current.progress)
             } else if (current is DropState.NoDock || current is DropState.DockDetected) {
                 _state.value = DropState.DockDetected(dockInfo)
+                scope.launch(Dispatchers.IO) {
+                    checkDockStatusAndJournal(dockInfo)
+                }
+            }
+        }
+    }
+
+    private suspend fun checkDockStatusAndJournal(dockInfo: DockInfo) {
+        val sets = setRepository.allSets.first()
+        val matchingSet = sets.firstOrNull { it.dockVolumeUuid == dockInfo.volumeUuid } ?: return
+        val unfinishedJournal = journalDao.getJournalForSet(matchingSet.id)
+        if (unfinishedJournal.isNotEmpty()) {
+            val copied = unfinishedJournal.count { it.status == JournalStatus.COPIED.name || it.status == JournalStatus.VERIFIED.name }
+            val total = unfinishedJournal.size
+            val copiedBytes = unfinishedJournal.filter { it.status == JournalStatus.COPIED.name || it.status == JournalStatus.VERIFIED.name }.sumOf { it.sizeBytes }
+            val totalBytes = unfinishedJournal.sumOf { it.sizeBytes }
+            val progress = DropProgress(
+                setId = matchingSet.id,
+                currentFolder = "",
+                folderIndex = 0,
+                totalFolders = 1,
+                copiedFiles = copied,
+                totalFiles = total,
+                copiedBytes = copiedBytes,
+                totalBytes = totalBytes,
+                speedMbS = 0.0,
+                filesPerSec = 0.0,
+                estMinutesRemaining = 0.0,
+                currentFilePath = ""
+            )
+            if (_state.value is DropState.DockDetected) {
+                _state.value = DropState.Resumable(progress)
             }
         }
     }
@@ -99,11 +158,41 @@ class DropEngine(
         }
     }
 
-    fun pause() {
+    fun pause(reason: PauseReason = PauseReason.USER_REQUESTED) {
+        if (reason == PauseReason.SYSTEM_TIMEOUT) {
+            val current = _state.value
+            val prog = when (current) {
+                is DropState.Dropping -> current.progress
+                is DropState.Verifying -> DropProgress(
+                    setId = "",
+                    currentFolder = current.currentFolder,
+                    folderIndex = current.folderIndex,
+                    totalFolders = current.totalFolders,
+                    copiedFiles = current.verifiedFiles,
+                    totalFiles = current.totalFiles,
+                    copiedBytes = 0L,
+                    totalBytes = 0L,
+                    speedMbS = 0.0,
+                    filesPerSec = 0.0,
+                    estMinutesRemaining = 0.0,
+                    currentFilePath = ""
+                )
+                is DropState.Paused -> current.progress
+                else -> null
+            }
+            activeJob?.cancel()
+            if (prog != null) {
+                _state.value = DropState.Resumable(prog)
+            } else {
+                _state.value = DropState.NoDock
+            }
+            return
+        }
+
         if (_state.value is DropState.Dropping) {
             isPaused = true
             val currentProg = (_state.value as DropState.Dropping).progress
-            _state.value = DropState.Paused(PauseReason.USER_REQUESTED, currentProg)
+            _state.value = DropState.Paused(reason, currentProg)
         }
     }
 
@@ -358,6 +447,10 @@ class DropEngine(
             var verifiedCount = 0
 
             for ((index, item) in filesToVerify.withIndex()) {
+                while (isPaused) {
+                    kotlinx.coroutines.delay(200)
+                }
+
                 val pathInSet = "${item.folderLabel}/${item.info.relativePath}"
                 val relVaultPath = "${set.name}/$pathInSet"
 

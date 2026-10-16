@@ -3,44 +3,13 @@
 
     <!-- Rule 3: ZERO network permissions. No INTERNET or ACCESS_NETWORK_STATE. -->
     <!-- Rule 7: SAF only. No MANAGE_EXTERNAL_STORAGE. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <uses-feature
-        android:name="android.hardware.usb.host"
-        android:required="false" />
-
     <application>
         <activity
             android:name=".SpikeLabActivity"
             android:exported="true"
             android:label="DockDrop Spike Lab"
             android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-            </intent-filter>
-            <meta-data
-                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/spike_usb_device_filter" />
-        </activity>
-
-        <receiver
-            android:name=".SpikeUsbReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-            <meta-data
-                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/spike_usb_device_filter" />
-        </receiver>
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".SpikeForegroundService"

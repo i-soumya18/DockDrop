@@ -29,7 +29,8 @@ data class DropProgress(
 enum class PauseReason(val message: String) {
     USER_REQUESTED("You paused the backup"),
     BATTERY_LOW("Battery dropped below threshold"),
-    THERMAL_THROTTLE("Device is cooling down")
+    THERMAL_THROTTLE("Device is cooling down"),
+    SYSTEM_TIMEOUT("Paused by system time limit — tap Resume to continue")
 }
 
 sealed class AttentionReason(val title: String, val message: String) {

@@ -8,7 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 
-class ManifestRepository(
+open class ManifestRepository(
     private val storageGateway: StorageGateway
 ) {
     private val json = Json {

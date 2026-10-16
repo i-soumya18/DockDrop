@@ -1,7 +1,7 @@
 # CLAUDE.md — DockDrop Project Bible
 
 > Read this first. Then AGENTS.md → DESIGN.md → SCREENS.md → PHASE_PROMPTS.md.
-> Last updated: 2026-10-16 · Status: Phase 0 complete · Phase 1 ready (see PHASE_PROMPTS.md)
+> Last updated: 2026-10-16 · Status: Phase 0, 1, 2 complete · Phase 3 ready (see PHASE_PROMPTS.md)
 
 ## 1. One-line pitch
 

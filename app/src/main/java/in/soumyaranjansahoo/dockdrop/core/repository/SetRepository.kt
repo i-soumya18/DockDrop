@@ -7,16 +7,18 @@ import `in`.soumyaranjansahoo.dockdrop.core.database.SourceFolderEntity
 import `in`.soumyaranjansahoo.dockdrop.core.model.Receipt
 import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
+import `in`.soumyaranjansahoo.dockdrop.core.database.ReceiptDao
+import `in`.soumyaranjansahoo.dockdrop.core.database.SetDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class SetRepository(
-    private val database: DropDatabase
+open class SetRepository(
+    private val setDao: SetDao,
+    private val receiptDao: ReceiptDao
 ) {
-    private val setDao = database.setDao()
-    private val receiptDao = database.receiptDao()
+    constructor(database: DropDatabase) : this(database.setDao(), database.receiptDao())
 
-    val allSets: Flow<List<SetDefinition>> = setDao.getAllSets().map { list ->
+    open val allSets: Flow<List<SetDefinition>> = setDao.getAllSets().map { list ->
         list.map { it.toDomain() }
     }
 

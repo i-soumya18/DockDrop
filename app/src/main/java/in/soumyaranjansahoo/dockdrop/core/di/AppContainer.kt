@@ -5,8 +5,10 @@ import `in`.soumyaranjansahoo.dockdrop.core.database.DropDatabase
 import `in`.soumyaranjansahoo.dockdrop.core.engine.DropEngine
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.ManifestRepository
 import `in`.soumyaranjansahoo.dockdrop.core.repository.SetRepository
+import `in`.soumyaranjansahoo.dockdrop.core.service.DropNotificationManager
 import `in`.soumyaranjansahoo.dockdrop.core.storage.SafStorageGateway
 import `in`.soumyaranjansahoo.dockdrop.core.storage.StorageGateway
+import `in`.soumyaranjansahoo.dockdrop.core.trigger.DockMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +38,18 @@ class AppContainer(val context: Context) {
             manifestRepository = manifestRepository,
             database = database,
             setRepository = setRepository,
+            scope = applicationScope
+        )
+    }
+
+    val notificationManager: DropNotificationManager by lazy {
+        DropNotificationManager(context)
+    }
+
+    val dockMonitor: DockMonitor by lazy {
+        DockMonitor(
+            context = context,
+            engine = engine,
             scope = applicationScope
         )
     }

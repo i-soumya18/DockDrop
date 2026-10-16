@@ -52,6 +52,7 @@ fun HomeScreen(
     onStartDropClick: (SetDefinition) -> Unit,
     onNavigateToDrop: () -> Unit,
     onNavigateToReceipt: () -> Unit,
+    onOpenKeepAliveClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
@@ -164,12 +165,21 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "DockDrop",
                         style = DockTitle.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
                         color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Keep running ⚡",
+                        style = DockBodySmall.copy(color = colors.dock, fontWeight = FontWeight.Medium),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onOpenKeepAliveClick() }
+                            .padding(4.dp)
                     )
                 }
             }

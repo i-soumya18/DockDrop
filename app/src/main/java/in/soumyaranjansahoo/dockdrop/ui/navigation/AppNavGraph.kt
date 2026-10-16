@@ -22,6 +22,8 @@ import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.attention.AttentionSheet
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.drop.DropScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.home.HomeScreen
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.onboarding.KeepAliveScreen
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.plugin.PlugInSheet
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.receipt.ReceiptScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.wizard.SetWizardScreen
 import kotlinx.coroutines.launch
@@ -31,12 +33,20 @@ object Routes {
     const val WIZARD = "wizard"
     const val DROP = "drop"
     const val RECEIPT = "receipt"
+    const val KEEP_ALIVE = "keep_alive"
 }
 
 @Composable
 fun AppNavGraph(
     container: AppContainer,
     currentDock: DockInfo?,
+    isUsbConnecting: Boolean = false,
+    showPlugInSheet: Boolean = false,
+    onDismissPlugInSheet: () -> Unit = {},
+    onStartDropInService: (String) -> Unit = {},
+    onResumeDropInService: (String) -> Unit = {},
+    onPauseDropInService: () -> Unit = {},
+    onStopDropInService: () -> Unit = {},
     navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier
 ) {
@@ -85,14 +95,12 @@ fun AppNavGraph(
                 onCreateSetClick = { navController.navigate(Routes.WIZARD) },
                 onStartDropClick = { set ->
                     activeSet = set
-                    scope.launch {
-                        val folders = setRepository.getSourceFoldersSync(set.id)
-                        engine.startDrop(set, folders)
-                        navController.navigate(Routes.DROP)
-                    }
+                    onStartDropInService(set.id)
+                    navController.navigate(Routes.DROP)
                 },
                 onNavigateToDrop = { navController.navigate(Routes.DROP) },
-                onNavigateToReceipt = { navController.navigate(Routes.RECEIPT) }
+                onNavigateToReceipt = { navController.navigate(Routes.RECEIPT) },
+                onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
             )
         }
 
@@ -126,9 +134,9 @@ fun AppNavGraph(
                     set = set,
                     sourceFolders = folders,
                     dropState = dropState,
-                    onPauseClick = { engine.pause() },
-                    onResumeClick = { engine.resume(set, folders) },
-                    onStopClick = { engine.stop() },
+                    onPauseClick = { onPauseDropInService() },
+                    onResumeClick = { onResumeDropInService(set.id) },
+                    onStopClick = { onStopDropInService() },
                     onBackClick = { navController.popBackStack() }
                 )
             } else {
@@ -138,7 +146,8 @@ fun AppNavGraph(
                     onCreateSetClick = { navController.navigate(Routes.WIZARD) },
                     onStartDropClick = {},
                     onNavigateToDrop = {},
-                    onNavigateToReceipt = {}
+                    onNavigateToReceipt = {},
+                    onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
                 )
             }
         }
@@ -166,10 +175,46 @@ fun AppNavGraph(
                     onCreateSetClick = { navController.navigate(Routes.WIZARD) },
                     onStartDropClick = {},
                     onNavigateToDrop = {},
-                    onNavigateToReceipt = {}
+                    onNavigateToReceipt = {},
+                    onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
                 )
             }
         }
+
+        composable(Routes.KEEP_ALIVE) {
+            KeepAliveScreen(
+                onDoneClick = { navController.popBackStack() },
+                onRemindMeLaterClick = { navController.popBackStack() }
+            )
+        }
+    }
+
+    // Modal Plug-in Sheet (SCREENS.md S04)
+    if (showPlugInSheet || isUsbConnecting) {
+        val matchingSet = sets.firstOrNull { it.dockVolumeUuid == currentDock?.volumeUuid } ?: sets.firstOrNull()
+        PlugInSheet(
+            dockInfo = currentDock,
+            isUsbConnecting = isUsbConnecting,
+            matchingSet = matchingSet,
+            dropState = dropState,
+            onStartBackup = { set ->
+                onDismissPlugInSheet()
+                activeSet = set
+                onStartDropInService(set.id)
+                navController.navigate(Routes.DROP)
+            },
+            onResumeBackup = { set ->
+                onDismissPlugInSheet()
+                activeSet = set
+                onResumeDropInService(set.id)
+                navController.navigate(Routes.DROP)
+            },
+            onSetupNewDock = {
+                onDismissPlugInSheet()
+                navController.navigate(Routes.WIZARD)
+            },
+            onDismiss = onDismissPlugInSheet
+        )
     }
 
     // Modal Attention Bottom Sheet (SCREENS.md S11)

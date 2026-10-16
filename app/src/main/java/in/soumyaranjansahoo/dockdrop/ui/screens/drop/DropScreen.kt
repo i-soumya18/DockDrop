@@ -19,10 +19,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,6 +55,7 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropScreen(
     set: SetDefinition,
@@ -64,6 +69,7 @@ fun DropScreen(
 ) {
     val colors = DockTheme.colors
     var showDetails by remember { mutableStateOf(false) }
+    var showStopConfirmSheet by remember { mutableStateOf(false) }
 
     val progress = when (dropState) {
         is DropState.Dropping -> dropState.progress
@@ -135,7 +141,7 @@ fun DropScreen(
                         }
                     }
 
-                    TextButton(onClick = onStopClick) {
+                    TextButton(onClick = { showStopConfirmSheet = true }) {
                         Text("Stop", style = DockBody.copy(color = colors.danger))
                     }
                 }
@@ -279,6 +285,53 @@ fun DropScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("Verification: size + SHA-256 on copy + re-read", style = DockMono.copy(fontSize = 11.sp), color = colors.seal)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showStopConfirmSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showStopConfirmSheet = false },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(topStart = RadiusMd, topEnd = RadiusMd)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Stop backup?",
+                    style = DockHeadline,
+                    color = colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Files copied so far are kept. You can resume later.",
+                    style = DockBodySmall,
+                    color = colors.textSecondary
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { showStopConfirmSheet = false }) {
+                        Text("Keep going", style = DockBody.copy(color = colors.dock, fontWeight = FontWeight.SemiBold))
+                    }
+                    Button(
+                        onClick = {
+                            showStopConfirmSheet = false
+                            onStopClick()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.danger)
+                    ) {
+                        Text("Stop", style = DockBody.copy(color = colors.textPrimary))
                     }
                 }
             }

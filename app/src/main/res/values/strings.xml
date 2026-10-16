@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">DockDrop</string>
+    <string name="tile_label">Back up now</string>
+    <string name="channel_progress_name">Backup progress</string>
+    <string name="channel_results_name">Backup results</string>
+    <string name="channel_attention_name">Needs attention</string>
 </resources>
