@@ -1,6 +1,7 @@
 package `in`.soumyaranjansahoo.dockdrop.core
 
 import android.content.SharedPreferences
+import java.io.File
 import `in`.soumyaranjansahoo.dockdrop.core.database.ReceiptDao
 import `in`.soumyaranjansahoo.dockdrop.core.database.ReceiptEntity
 import `in`.soumyaranjansahoo.dockdrop.core.database.SetDao
@@ -197,5 +198,22 @@ class Phase5PlayReadinessAndSettingsTest {
         verify(mockSetDao).deleteAllSets()
         verify(mockSetDao).deleteAllSourceFolders()
         }
+    }
+
+    @Test
+    fun testManifestPermissionsIncludeWakeLockAndExcludeBanned() {
+        val manifestFile = File("src/main/AndroidManifest.xml")
+        assertTrue("AndroidManifest.xml must exist", manifestFile.exists())
+        val content = manifestFile.readText()
+
+        // Required permissions
+        assertTrue("Manifest must declare WAKE_LOCK for DropWakeLock CPU hold", content.contains("android.permission.WAKE_LOCK"))
+        assertTrue("Manifest must declare FOREGROUND_SERVICE", content.contains("android.permission.FOREGROUND_SERVICE"))
+        assertTrue("Manifest must declare FOREGROUND_SERVICE_DATA_SYNC", content.contains("android.permission.FOREGROUND_SERVICE_DATA_SYNC"))
+
+        // Banned permissions (Rule 3 & Rule 7)
+        assertFalse("Rule 3: INTERNET is banned", content.contains("android.permission.INTERNET"))
+        assertFalse("Rule 3: ACCESS_NETWORK_STATE is banned", content.contains("android.permission.ACCESS_NETWORK_STATE"))
+        assertFalse("Rule 7: MANAGE_EXTERNAL_STORAGE is banned", content.contains("android.permission.MANAGE_EXTERNAL_STORAGE"))
     }
 }

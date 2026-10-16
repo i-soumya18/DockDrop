@@ -257,10 +257,15 @@ class DropService : Service() {
 
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DockDrop:DropWakeLock").apply {
-            setReferenceCounted(false)
-            acquire(6 * 60 * 60 * 1000L) // 6 hours max
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DockDrop:DropWakeLock").apply {
+                setReferenceCounted(false)
+                acquire(6 * 60 * 60 * 1000L) // 6 hours max
+            }
+        } catch (_: Exception) {
+            // Defensive: if wake lock acquisition is denied or restricted by OEM/system,
+            // the active foreground service notification still maintains execution priority.
         }
     }
 

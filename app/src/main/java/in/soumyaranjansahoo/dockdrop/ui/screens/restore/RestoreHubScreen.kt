@@ -116,29 +116,12 @@ fun RestoreHubScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         bottomBar = {
-            // Sleek bottom navigation bar per SCREENS.md §1 (Home · Restore · Settings)
-            Column(modifier = Modifier.fillMaxWidth().background(colors.surface).border(1.dp, colors.outline)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Home",
-                        style = DockBody.copy(color = colors.textSecondary, fontWeight = FontWeight.Normal),
-                        modifier = Modifier.clickable { onNavigateToHome() }
-                    )
-                    Text(
-                        text = "Restore",
-                        style = DockBody.copy(color = colors.dock, fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = "Settings",
-                        style = DockBody.copy(color = colors.textSecondary, fontWeight = FontWeight.Normal),
-                        modifier = Modifier.clickable { onNavigateToSettings() }
-                    )
-                }
-            }
+            `in`.soumyaranjansahoo.dockdrop.ui.components.DockBottomBar(
+                currentRoute = `in`.soumyaranjansahoo.dockdrop.ui.navigation.Routes.RESTORE_HUB,
+                onNavigateToHome = onNavigateToHome,
+                onNavigateToRestore = { /* Already on Restore */ },
+                onNavigateToSettings = onNavigateToSettings
+            )
         }
     ) { innerPadding ->
         LazyColumn(

@@ -64,7 +64,7 @@ class DropNotificationManager(private val context: Context) {
         )
 
         val builder = NotificationCompat.Builder(context, spec.channelId)
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(spec.title)
             .setContentText(spec.text)
             .setContentIntent(contentIntent)

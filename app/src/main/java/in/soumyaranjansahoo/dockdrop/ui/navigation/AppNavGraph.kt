@@ -242,6 +242,17 @@ fun AppNavGraph(
                 setRepository = setRepository,
                 sets = sets,
                 onBackClick = { navController.popBackStack() },
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToRestore = {
+                    navController.navigate(Routes.RESTORE_HUB) {
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
                 onNavigateToKeepAlive = { navController.navigate(Routes.KEEP_ALIVE) }
             )

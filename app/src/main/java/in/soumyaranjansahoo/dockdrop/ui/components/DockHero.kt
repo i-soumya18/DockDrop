@@ -21,22 +21,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.unit.dp
-import `in`.soumyaranjansahoo.dockdrop.core.model.DropState
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMotion
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
-
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.dp
+import `in`.soumyaranjansahoo.dockdrop.core.model.DropState
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
 
 @Composable
@@ -48,7 +45,7 @@ fun DockHero(
     val colors = DockTheme.colors
     val isReducedMotion = LocalReducedMotion.current
 
-    // Breathe transition for absent/waiting state (disabled if reduced motion)
+    // Breathe transition for absent/waiting state
     val infiniteTransition = rememberInfiniteTransition(label = "DockBreathe")
     val animatedBreatheAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
@@ -61,7 +58,7 @@ fun DockHero(
     )
     val breatheAlpha = if (isReducedMotion) 0.75f else animatedBreatheAlpha
 
-    // Sweep scan line for verifying state (disabled if reduced motion)
+    // Sweep scan line for verifying state
     val animatedScanAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -118,7 +115,7 @@ fun DockHero(
 
     Box(
         modifier = modifier
-            .size(220.dp)
+            .size(210.dp)
             .semantics(mergeDescendants = true) {
                 stateDescription = a11yStateDescription
             },
@@ -130,33 +127,92 @@ fun DockHero(
 
             when (state) {
                 is DropState.NoDock -> {
-                    // Dashed drive outline with ghost cable
-                    drawDriveBody(center, isSolid = false, alpha = breatheAlpha, colors.textTertiary)
-                    drawGhostCable(center, alpha = breatheAlpha, colors.dock)
+                    // Soft background glow
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(colors.surfaceRaised.copy(alpha = 0.5f), Color.Transparent),
+                            center = center,
+                            radius = ringRadius
+                        ),
+                        radius = ringRadius,
+                        center = center
+                    )
+                    // Dashed ring track
+                    drawCircle(
+                        color = colors.outline.copy(alpha = breatheAlpha * 0.6f),
+                        radius = ringRadius,
+                        center = center,
+                        style = Stroke(
+                            width = 3.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                        )
+                    )
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = true,
+                        alpha = breatheAlpha,
+                        bodyColor = colors.surface,
+                        borderColor = colors.outline,
+                        ledColor = colors.textTertiary,
+                        cableColor = colors.dock
+                    )
                 }
 
                 is DropState.DockDetected, is DropState.AwaitingConfirm, is DropState.Preflight -> {
-                    // Solid drive glyph with latched cable
-                    drawDriveBody(center, isSolid = true, alpha = 1f, colors.dock)
-                    drawLatchedCable(center, colors.dock)
+                    // Radial gradient background
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(colors.surfaceRaised.copy(alpha = 0.85f), colors.surfaceRaised.copy(alpha = 0.2f)),
+                            center = center,
+                            radius = ringRadius
+                        ),
+                        radius = ringRadius,
+                        center = center
+                    )
                     // Outer ring base
                     drawCircle(
-                        color = colors.outline,
+                        color = colors.outline.copy(alpha = 0.6f),
                         radius = ringRadius,
                         center = center,
-                        style = Stroke(width = 3.dp.toPx())
+                        style = Stroke(width = 3.5.dp.toPx())
+                    )
+                    // Mockup prominent blue accent arc on top right (approx -60° to 15°)
+                    drawArc(
+                        color = colors.dock,
+                        startAngle = -65f,
+                        sweepAngle = 75f,
+                        useCenter = false,
+                        topLeft = Offset(center.x - ringRadius, center.y - ringRadius),
+                        size = Size(ringRadius * 2, ringRadius * 2),
+                        style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+                    )
+
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 1f,
+                        bodyColor = colors.surface,
+                        borderColor = colors.outline,
+                        ledColor = colors.dock,
+                        cableColor = colors.dock
                     )
                 }
 
                 is DropState.Dropping -> {
-                    drawDriveBody(center, isSolid = true, alpha = 1f, colors.dock)
-                    drawLatchedCable(center, colors.dock)
-                    // Outer background ring
                     drawCircle(
-                        color = colors.outline,
+                        brush = Brush.radialGradient(
+                            colors = listOf(colors.surfaceRaised.copy(alpha = 0.85f), colors.surfaceRaised.copy(alpha = 0.2f)),
+                            center = center,
+                            radius = ringRadius
+                        ),
+                        radius = ringRadius,
+                        center = center
+                    )
+                    drawCircle(
+                        color = colors.outline.copy(alpha = 0.6f),
                         radius = ringRadius,
                         center = center,
-                        style = Stroke(width = 4.dp.toPx())
+                        style = Stroke(width = 3.5.dp.toPx())
                     )
                     // Progress arc
                     val sweep = (progressPct.coerceIn(0f, 1f)) * 360f
@@ -169,17 +225,33 @@ fun DockHero(
                         size = Size(ringRadius * 2, ringRadius * 2),
                         style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
                     )
+
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 1f,
+                        bodyColor = colors.surface,
+                        borderColor = colors.outline,
+                        ledColor = colors.dock,
+                        cableColor = colors.dock
+                    )
                 }
 
                 is DropState.Verifying -> {
-                    drawDriveBody(center, isSolid = true, alpha = 1f, colors.dock)
-                    drawLatchedCable(center, colors.dock)
-                    // Thin sweeping scan line
                     drawCircle(
-                        color = colors.outline,
+                        brush = Brush.radialGradient(
+                            colors = listOf(colors.surfaceRaised.copy(alpha = 0.85f), colors.surfaceRaised.copy(alpha = 0.2f)),
+                            center = center,
+                            radius = ringRadius
+                        ),
+                        radius = ringRadius,
+                        center = center
+                    )
+                    drawCircle(
+                        color = colors.outline.copy(alpha = 0.6f),
                         radius = ringRadius,
                         center = center,
-                        style = Stroke(width = 2.dp.toPx())
+                        style = Stroke(width = 3.5.dp.toPx())
                     )
                     drawArc(
                         color = colors.seal,
@@ -188,44 +260,86 @@ fun DockHero(
                         useCenter = false,
                         topLeft = Offset(center.x - ringRadius, center.y - ringRadius),
                         size = Size(ringRadius * 2, ringRadius * 2),
-                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
+                    )
+
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 1f,
+                        bodyColor = colors.surface,
+                        borderColor = colors.outline,
+                        ledColor = colors.seal,
+                        cableColor = colors.dock
                     )
                 }
 
                 is DropState.Sealed -> {
-                    // Green is earned: seal checkmark and closed green ring
-                    drawDriveBody(center, isSolid = true, alpha = 1f, colors.seal)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(colors.seal.copy(alpha = 0.12f), Color.Transparent),
+                            center = center,
+                            radius = ringRadius
+                        ),
+                        radius = ringRadius,
+                        center = center
+                    )
                     drawCircle(
                         color = colors.seal,
                         radius = ringRadius,
                         center = center,
                         style = Stroke(width = 4.dp.toPx())
                     )
+
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 1f,
+                        bodyColor = colors.surface,
+                        borderColor = colors.seal.copy(alpha = 0.4f),
+                        ledColor = colors.seal,
+                        cableColor = colors.seal
+                    )
                     drawCheckmark(center, checkmarkTrim.value, colors.seal)
                 }
 
                 is DropState.Partial -> {
-                    // Amber icon and ring (never green)
-                    drawDriveBody(center, isSolid = true, alpha = 1f, colors.attention)
                     drawCircle(
                         color = colors.attention,
                         radius = ringRadius,
                         center = center,
-                        style = Stroke(width = 4.dp.toPx())
+                        style = Stroke(width = 3.5.dp.toPx())
+                    )
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 1f,
+                        bodyColor = colors.surface,
+                        borderColor = colors.attention.copy(alpha = 0.5f),
+                        ledColor = colors.attention,
+                        cableColor = colors.attention
                     )
                 }
 
                 is DropState.Attention, is DropState.Interrupted, is DropState.Paused, is DropState.Resumable -> {
                     val tint = if (state is DropState.Attention) colors.attention else colors.dock
-                    drawDriveBody(center, isSolid = true, alpha = 0.85f, tint)
                     drawCircle(
-                        color = colors.attention,
+                        color = tint,
                         radius = ringRadius,
                         center = center,
                         style = Stroke(
-                            width = 4.dp.toPx(),
+                            width = 3.5.dp.toPx(),
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 12f))
                         )
+                    )
+                    drawSolidSsd(
+                        center = center,
+                        isGhost = false,
+                        alpha = 0.9f,
+                        bodyColor = colors.surface,
+                        borderColor = tint.copy(alpha = 0.5f),
+                        ledColor = tint,
+                        cableColor = tint
                     )
                 }
             }
@@ -233,79 +347,120 @@ fun DockHero(
     }
 }
 
-private fun DrawScope.drawDriveBody(
+/**
+ * Draws the high-fidelity tactile SSD body with top cable and bottom LED light
+ * matching the mockup illustration.
+ */
+private fun DrawScope.drawSolidSsd(
     center: Offset,
-    isSolid: Boolean,
+    isGhost: Boolean,
     alpha: Float,
-    tint: Color
+    bodyColor: Color,
+    borderColor: Color,
+    ledColor: Color,
+    cableColor: Color
 ) {
-    val driveWidth = 72.dp.toPx()
-    val driveHeight = 92.dp.toPx()
-    val topLeft = Offset(center.x - driveWidth / 2f, center.y - driveHeight / 2f)
-    val corner = CornerRadius(16.dp.toPx(), 16.dp.toPx())
+    val driveWidth = 74.dp.toPx()
+    val driveHeight = 98.dp.toPx()
+    val driveTopLeft = Offset(center.x - driveWidth / 2f, center.y - driveHeight / 2f + 4.dp.toPx())
+    val cornerRadius = CornerRadius(14.dp.toPx(), 14.dp.toPx())
 
-    val strokeWidth = 2.5.dp.toPx()
-    val pathEffect = if (isSolid) null else PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+    // 1. Cable & Top Plug Latch
+    val plugWidth = 16.dp.toPx()
+    val plugHeight = 8.dp.toPx()
+    val plugTop = driveTopLeft.y - plugHeight + 2.dp.toPx()
+    val cableLength = 26.dp.toPx()
+    val cableTop = plugTop - cableLength
+
+    if (isGhost) {
+        // Ghost cable
+        drawLine(
+            color = cableColor.copy(alpha = alpha * 0.5f),
+            start = Offset(center.x, plugTop),
+            end = Offset(center.x, cableTop),
+            strokeWidth = 3.5.dp.toPx(),
+            cap = StrokeCap.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+        )
+    } else {
+        // Solid latching cable
+        drawLine(
+            color = cableColor,
+            start = Offset(center.x, plugTop + 2.dp.toPx()),
+            end = Offset(center.x, cableTop),
+            strokeWidth = 4.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        // Blue plug connector
+        drawRoundRect(
+            color = cableColor,
+            topLeft = Offset(center.x - plugWidth / 2f, plugTop),
+            size = Size(plugWidth, plugHeight),
+            cornerRadius = CornerRadius(2.5.dp.toPx(), 2.5.dp.toPx())
+        )
+    }
+
+    // 2. Drive Solid Body Fill
+    if (!isGhost) {
+        // Subtle drop shadow / back layer
+        drawRoundRect(
+            color = Color.Black.copy(alpha = 0.06f),
+            topLeft = Offset(driveTopLeft.x, driveTopLeft.y + 2.dp.toPx()),
+            size = Size(driveWidth, driveHeight),
+            cornerRadius = cornerRadius
+        )
+    }
 
     drawRoundRect(
-        color = tint.copy(alpha = alpha),
-        topLeft = topLeft,
+        color = if (isGhost) bodyColor.copy(alpha = alpha * 0.4f) else bodyColor,
+        topLeft = driveTopLeft,
         size = Size(driveWidth, driveHeight),
-        cornerRadius = corner,
-        style = Stroke(width = strokeWidth, pathEffect = pathEffect)
+        cornerRadius = cornerRadius,
+        style = Fill
     )
 
-    // Port notch at top
-    val portWidth = 20.dp.toPx()
-    val portHeight = 6.dp.toPx()
+    // 3. Drive Border Outline
+    val borderEffect = if (isGhost) PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f) else null
     drawRoundRect(
-        color = tint.copy(alpha = alpha),
-        topLeft = Offset(center.x - portWidth / 2f, topLeft.y + 8.dp.toPx()),
-        size = Size(portWidth, portHeight),
-        cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
-        style = Stroke(width = 2.dp.toPx())
+        color = borderColor.copy(alpha = if (isGhost) alpha else 0.9f),
+        topLeft = driveTopLeft,
+        size = Size(driveWidth, driveHeight),
+        cornerRadius = cornerRadius,
+        style = Stroke(width = 1.6.dp.toPx(), pathEffect = borderEffect)
     )
-}
 
-private fun DrawScope.drawGhostCable(center: Offset, alpha: Float, tint: Color) {
-    val cableLength = 36.dp.toPx()
-    val startY = center.y - 75.dp.toPx()
-    val endY = startY + cableLength
-
-    drawLine(
-        color = tint.copy(alpha = alpha * 0.6f),
-        start = Offset(center.x, startY),
-        end = Offset(center.x, endY),
-        strokeWidth = 3.dp.toPx(),
-        cap = StrokeCap.Round,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+    // 4. Subtle Top Notch/Port Detail
+    val notchWidth = 20.dp.toPx()
+    val notchHeight = 4.dp.toPx()
+    drawRoundRect(
+        color = borderColor.copy(alpha = if (isGhost) alpha * 0.4f else 0.7f),
+        topLeft = Offset(center.x - notchWidth / 2f, driveTopLeft.y + 14.dp.toPx()),
+        size = Size(notchWidth, notchHeight),
+        cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
     )
-}
 
-private fun DrawScope.drawLatchedCable(center: Offset, tint: Color) {
-    val cableLength = 28.dp.toPx()
-    val startY = center.y - 65.dp.toPx()
-    val endY = center.y - 37.dp.toPx()
-
-    drawLine(
-        color = tint,
-        start = Offset(center.x, startY),
-        end = Offset(center.x, endY),
-        strokeWidth = 3.5.dp.toPx(),
-        cap = StrokeCap.Round
+    // 5. Bottom Glowing LED Light Strip
+    val ledWidth = 22.dp.toPx()
+    val ledHeight = 3.5.dp.toPx()
+    val ledTop = driveTopLeft.y + driveHeight - 16.dp.toPx()
+    drawRoundRect(
+        color = ledColor.copy(alpha = if (isGhost) alpha * 0.3f else 1f),
+        topLeft = Offset(center.x - ledWidth / 2f, ledTop),
+        size = Size(ledWidth, ledHeight),
+        cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
     )
 }
 
 private fun DrawScope.drawCheckmark(center: Offset, trim: Float, tint: Color) {
     if (trim <= 0f) return
     val checkPath = Path().apply {
-        moveTo(center.x - 16.dp.toPx(), center.y + 2.dp.toPx())
-        lineTo(center.x - 4.dp.toPx(), center.y + 14.dp.toPx())
-        lineTo(center.x + 18.dp.toPx(), center.y - 12.dp.toPx())
+        moveTo(center.x - 14.dp.toPx(), center.y + 2.dp.toPx())
+        lineTo(center.x - 3.dp.toPx(), center.y + 13.dp.toPx())
+        lineTo(center.x + 16.dp.toPx(), center.y - 10.dp.toPx())
     }
     drawPath(
         path = checkPath,
         color = tint,
-        style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
     )
 }

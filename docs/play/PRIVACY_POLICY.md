@@ -47,6 +47,7 @@ DockDrop requests only the minimum local hardware and service permissions requir
 - **`android.permission.POST_NOTIFICATIONS`** *(Android 13+)*: Used to show persistent backup and restore progress notifications, and to alert you when a backup is sealed or needs your attention.
 - **`android.permission.FOREGROUND_SERVICE` & `android.permission.FOREGROUND_SERVICE_DATA_SYNC`**: Used to keep the local file transfer active when your screen turns off or when you switch apps, preventing corrupted or incomplete transfers to your external SSD.
 - **`android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`** *(Optional)*: Guided in setup so Android battery management does not prematurely terminate multi-gigabyte backup jobs while the phone is locked.
+- **`android.permission.WAKE_LOCK`**: Keeps the CPU awake during active file transfers so that the backup or restore does not halt when the phone's screen locks.
 - **`android.permission.VIBRATE`**: Used to provide subtle haptic feedback for key physical events (SSD plugged in, backup sealed, attention needed).
 
 DockDrop **never** requests `MANAGE_EXTERNAL_STORAGE` ("All files access").
