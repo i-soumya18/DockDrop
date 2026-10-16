@@ -1,58 +1,87 @@
 package `in`.soumyaranjansahoo.dockdrop.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = DarkDock,
+    onPrimary = DarkOnDock,
+    background = DarkBg,
+    onBackground = DarkTextPrimary,
+    surface = DarkSurface,
+    onSurface = DarkTextPrimary,
+    surfaceVariant = DarkSurfaceRaised,
+    onSurfaceVariant = DarkTextSecondary,
+    outline = DarkOutline
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = LightDock,
+    onPrimary = LightOnDock,
+    background = LightBg,
+    onBackground = LightTextPrimary,
+    surface = LightSurface,
+    onSurface = LightTextPrimary,
+    surfaceVariant = LightSurfaceRaised,
+    onSurfaceVariant = LightTextSecondary,
+    outline = LightOutline
 )
 
 @Composable
 fun DockDropTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val dockColors = if (darkTheme) {
+        DockColors(
+            bg = DarkBg,
+            surface = DarkSurface,
+            surfaceRaised = DarkSurfaceRaised,
+            outline = DarkOutline,
+            textPrimary = DarkTextPrimary,
+            textSecondary = DarkTextSecondary,
+            textTertiary = DarkTextTertiary,
+            dock = DarkDock,
+            onDock = DarkOnDock,
+            seal = DarkSeal,
+            attention = DarkAttention,
+            danger = DarkDanger
+        )
+    } else {
+        DockColors(
+            bg = LightBg,
+            surface = LightSurface,
+            surfaceRaised = LightSurfaceRaised,
+            outline = LightOutline,
+            textPrimary = LightTextPrimary,
+            textSecondary = LightTextSecondary,
+            textTertiary = LightTextTertiary,
+            dock = LightDock,
+            onDock = LightOnDock,
+            seal = LightSeal,
+            attention = LightAttention,
+            danger = LightDanger
+        )
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+
+    CompositionLocalProvider(LocalDockColors provides dockColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = Shapes,
+            content = content
+        )
+    }
+}
+
+object DockTheme {
+    val colors: DockColors
+        @Composable
+        get() = LocalDockColors.current
 }

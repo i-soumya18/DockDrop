@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "DockDrop"
 include(":app")
- 
+include(":spikelab")

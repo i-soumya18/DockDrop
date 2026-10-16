@@ -1,15 +1,63 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Built application files
+*.apk
+*.aar
+*.aab
+*.dex
+*.class
+
+# Output and build directories
+build/
+bin/
+out/
+
+# Gradle files & caches
+.gradle/
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin compiler cache
+.kotlin/
+
+# Local configuration & SDK paths
 local.properties
+.env
+*.env
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/deviceManager.xml
+.idea/appInsightsSettings.xml
+.idea/shelf/
+.idea/usage.statistics.xml
+.idea/other.xml
+
+# Keystore files (never commit signing keys)
+*.jks
+*.keystore
+
+# Native build artifacts
+.externalNativeBuild/
+.cxx/
+
+# Android Studio captures and logs
+captures/
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & AI tooling local caches
+.gemini/

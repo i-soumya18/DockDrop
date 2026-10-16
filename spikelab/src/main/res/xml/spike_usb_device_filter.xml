@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB Mass Storage Class (0x08), SCSI Transparent Command Set (0x06), Bulk-Only Transport (0x50 = 80) -->
+    <usb-device class="8" subclass="6" protocol="80" />
+    <!-- UASP (USB Attached SCSI Protocol, protocol 0x62 = 98) or generic Mass Storage class 8 -->
+    <usb-device class="8" />
+</resources>

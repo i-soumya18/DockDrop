@@ -7,23 +7,23 @@
 
 | Phase | Name | Status | Blocked on | Agents |
 |---|---|---|---|---|
-| 0 | Spikes on the Galaxy A14 | **ACTIVE** (started 2026-10-16) | nothing | A1, A2, A7 (Spike Lab only), A8 |
-| 1 | Manual backup MVP | Not started | Phase 0 complete; ADR-001/002/003 written | A1, A3, A4, A7, A8 |
-| 2 | Auto trigger & foreground service | Not started | Phase 1 complete; ADR-001 and ADR-003 | A2, A3, A7, A8 |
+| 0 | Spikes on the Galaxy A14 | **COMPLETE** (completed 2026-10-16) | — (`docs/spikes/PHASE0_RESULTS.md`) | A1, A2, A7 (Spike Lab only), A8 |
+| 1 | Manual backup MVP | **READY** (unblocked 2026-10-16) | Unblocked ([ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md), [ADR-002](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-002-verification-level.md), [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md)) | A1, A3, A4, A7, A8 |
+| 2 | Auto trigger & foreground service | Not started | Phase 1 complete; [ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md) and [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md) | A2, A3, A7, A8 |
 | 3 | Restore | Not started | Phase 1 complete (manifest reader) | A5, A4, A7, A8 |
 | 4 | Policies & encryption | Not started | Phase 3 complete (restore must exist to test) | A4, A6, A7, A8 |
 | 5 | Play readiness & polish | Not started | Phase 4 complete | A7, A8 |
 
 ---
 
-<details open>
-<summary><strong>PHASE 0 — Spikes on the Galaxy A14 (ACTIVE)</strong></summary>
+<details>
+<summary><strong>PHASE 0 — Spikes on the Galaxy A14 (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Active · started 2026-10-16
+- **Status:** Complete · started & completed 2026-10-16 on `SM-A146B` (Android 15 / One UI 7.0, Build `AP3A.240905.015.A2.A146BXXSFDZI2`) + Hikvision 128 GB exFAT SSD (`4E21-0000`).
 - **Goal:** replace every "unverified" item in CLAUDE.md §9 with evidence from the real phone and the real SSD, and write three ADRs. No production code.
 - **Blockers:** none
-- **Next action:** write the one-page test plan (planning gate below) and wait for approval.
+- **Deliverables completed:** `docs/spikes/PHASE0_RESULTS.md`, `docs/spikes/phase0_raw_runs.csv`, `docs/adr/ADR-001-trigger-strategy.md`, `docs/adr/ADR-002-verification-level.md`, `docs/adr/ADR-003-foreground-service-type.md`, debug-only `:spikelab` module.
 
 ### Prompt
 
@@ -87,7 +87,7 @@ Before any code, produce a **one-page test plan** listing: the test IDs below, t
 - Sustained large-file write is **below 15 MB/s**, or the first-Drop estimate for 20 GB exceeds 60 minutes.
 - Samsung terminates a running foreground service even with the battery exemption.
 - Any of the planned approaches seems to require `MANAGE_EXTERNAL_STORAGE` or `INTERNET`.
-- The package name `com.ritelabs.dockdrop` is not available or the owner prefers another.
+- The package name `in.soumyaranjansahoo.dockdrop` is confirmed.
 - You feel the urge to write "real" Engine or UI code. Stop; that is Phase 1.
 
 #### Deliverables
@@ -101,11 +101,17 @@ Before any code, produce a **one-page test plan** listing: the test IDs below, t
 
 ---
 
-<details>
-<summary><strong>PHASE 1 — Manual backup MVP (Not started)</strong></summary>
+<details open>
+<summary><strong>PHASE 1 — Manual backup MVP (READY)</strong></summary>
 
 ### Current Status
-- **Status:** Not started · **Blocked on:** Phase 0 complete and ADR-001/002/003 written (the verification default and buffer size come from them).
+- **Status:** Ready (unblocked 2026-10-16) · **Unblocked by:** [ADR-001](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-001-trigger-strategy.md), [ADR-002](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-002-verification-level.md), [ADR-003](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/adr/ADR-003-foreground-service-type.md), and [PHASE0_RESULTS.md](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/spikes/PHASE0_RESULTS.md).
+- **Phase 0 Budgets & Rules to Apply in Phase 1:**
+  - **Default verification level (`ADR-002`):** `"size + SHA-256 on copy + re-read"` (deferred FIFO destination re-read after the Set copy pass completes so earlier files are not served from the Linux VFS page cache).
+  - **Streaming buffer size (`ADR-002`):** `1 MB` (`1,048,576` bytes) reusable buffer.
+  - **A1 5,000-file listing budget (`ADR-002`):** `≤ 1,500 ms` via `DocumentsContract` batch cursor queries (observed median: `285 ms`).
+  - **A1 Atomic rename rule (`R2`):** `ExternalStorageProvider` auto-suffixes (`existing (1).bin`) instead of overwriting; `StorageGateway.renameAtomic` **must** delete any existing target document before calling `renameDocument` and assert `COLUMN_DISPLAY_NAME`.
+  - **A1 Native move (`R3`):** Use `DocumentsContract.moveDocument` (`~52 ms`) for moving deleted files to `_deleted/`.
 - **Goal:** pick folders and an SSD, run a manual Drop with progress, resume, atomic writes, hash verification, manifest commit and a Receipt.
 
 ### Prompt
