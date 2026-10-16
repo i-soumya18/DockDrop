@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,28 +18,38 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Chat
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -56,6 +68,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -68,10 +82,11 @@ import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.core.model.VerificationLevel
 import `in`.soumyaranjansahoo.dockdrop.core.storage.StorageGateway
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockSelectableCard
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.crypto.EncryptionSetupScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockDisplay
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
@@ -84,6 +99,8 @@ import java.util.UUID
 data class FolderSuggestion(
     val label: String,
     val description: String,
+    val icon: ImageVector,
+    val iconColor: Color,
     var grantedUri: Uri? = null,
     var isSelected: Boolean = false
 )
@@ -108,10 +125,34 @@ fun SetWizardScreen(
     // Step 1 State: Source Folders
     val suggestions = remember {
         mutableStateListOf(
-            FolderSuggestion("Camera", "Photos & Videos in DCIM/Camera", isSelected = true),
-            FolderSuggestion("Pictures", "Screenshots and saved pictures", isSelected = true),
-            FolderSuggestion("Documents", "Local documents and PDFs", isSelected = false),
-            FolderSuggestion("WhatsApp Media", "Received photos and documents", isSelected = false)
+            FolderSuggestion(
+                label = "Camera",
+                description = "Photos & Videos in DCIM/Camera",
+                icon = Icons.Outlined.PhotoCamera,
+                iconColor = Color(0xFF2563EB),
+                isSelected = true
+            ),
+            FolderSuggestion(
+                label = "Pictures",
+                description = "Screenshots and saved pictures",
+                icon = Icons.Outlined.Image,
+                iconColor = Color(0xFF6366F1),
+                isSelected = true
+            ),
+            FolderSuggestion(
+                label = "Documents",
+                description = "Local documents and PDFs",
+                icon = Icons.Outlined.Description,
+                iconColor = Color(0xFF059669),
+                isSelected = false
+            ),
+            FolderSuggestion(
+                label = "WhatsApp Media",
+                description = "Received photos and documents",
+                icon = Icons.Outlined.Chat,
+                iconColor = Color(0xFF10B981),
+                isSelected = false
+            )
         )
     }
 
@@ -139,7 +180,7 @@ fun SetWizardScreen(
     if (showEncryptionSetup) {
         EncryptionSetupScreen(
             setName = setName.ifBlank { "My Phone" },
-            onComplete = { pass, recKey ->
+            onComplete = { pass, _ ->
                 if (encryptedSetManager != null) {
                     val setId = UUID.randomUUID().toString()
                     val prov = encryptedSetManager.provisionNewSetEncryption(setId, pass)
@@ -169,19 +210,34 @@ fun SetWizardScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(colors.danger.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = colors.danger,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = "Turn on Mirror mode?",
                     style = DockHeadline,
                     color = colors.danger
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Mirror mode removes files from the SSD when you delete them on your phone. Deleted files can't be recovered. Keep this off unless you're sure.",
+                    text = "Mirror mode removes files from the SSD when you delete them on your phone. Deleted files cannot be recovered. Keep this off unless you specifically need an exact mirror.",
                     style = DockBody,
-                    color = colors.textPrimary
+                    color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
@@ -191,10 +247,12 @@ fun SetWizardScreen(
                         showMirrorSheet = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = colors.danger),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
-                    Text("Turn on Mirror mode", color = colors.textPrimary, style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                    Text("Turn on Mirror mode", color = Color.White, style = DockBody.copy(fontWeight = FontWeight.SemiBold))
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
@@ -203,8 +261,10 @@ fun SetWizardScreen(
                         mirrorConfirmed = false
                         showMirrorSheet = false
                     },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
                     Text("Keep files instead", style = DockBody)
                 }
@@ -254,11 +314,30 @@ fun SetWizardScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
+        topBar = {
+            DockTopAppBar(
+                title = "New Backup Set",
+                subtitle = "Step $currentStep of 4",
+                onBackClick = {
+                    if (currentStep > 1) currentStep-- else onCancel()
+                },
+                actions = {
+                    TextButton(onClick = onCancel) {
+                        Text(
+                            "Cancel",
+                            color = colors.textTertiary,
+                            style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
+            )
+        },
         bottomBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
                 when (currentStep) {
                     1 -> {
@@ -269,13 +348,16 @@ fun SetWizardScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.dock,
                                 contentColor = colors.onDock
                             )
                         ) {
-                            Text("Next · Storage destination", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                if (hasSelected) "Next: Pick Storage Location" else "Select Folders to Continue",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            )
                         }
                     }
 
@@ -286,13 +368,16 @@ fun SetWizardScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.dock,
                                 contentColor = colors.onDock
                             )
                         ) {
-                            Text("Next · Policies & security", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                "Next: Backup Policies",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            )
                         }
                     }
 
@@ -302,23 +387,23 @@ fun SetWizardScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.dock,
                                 contentColor = colors.onDock
                             )
                         ) {
-                            Text("Next · Review choices", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                "Next: Review & Confirm",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            )
                         }
                     }
 
                     4 -> {
                         Button(
                             onClick = {
-                                val setId = provisionedEncryption?.let {
-                                    // SetId provisioned during encryption
-                                    UUID.randomUUID().toString()
-                                } ?: UUID.randomUUID().toString()
+                                val setId = UUID.randomUUID().toString()
 
                                 scope.launch {
                                     if (isEncrypted && provisionedEncryption != null && vaultTreeUri != null) {
@@ -357,13 +442,16 @@ fun SetWizardScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = colors.dock,
                                 contentColor = colors.onDock
                             )
                         ) {
-                            Text("Create backup set", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                "Create Backup Set",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            )
                         }
                     }
                 }
@@ -376,33 +464,26 @@ fun SetWizardScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp)
         ) {
+            // Step Progress Bar
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(onClick = {
-                        if (currentStep > 1) currentStep-- else onCancel()
-                    }) {
-                        Text("← Back", color = colors.dock, style = DockBody)
-                    }
-
-                    // Progress dots (4 steps)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (i in 1..4) {
-                            Box(
-                                modifier = Modifier
-                                    .size(if (i == currentStep) 10.dp else 6.dp)
-                                    .clip(CircleShape)
-                                    .background(if (i <= currentStep) colors.dock else colors.outline)
-                            )
-                        }
-                    }
-
-                    TextButton(onClick = onCancel) {
-                        Text("Cancel", color = colors.textTertiary, style = DockBodySmall)
+                    for (step in 1..4) {
+                        val isFinished = step <= currentStep
+                        val barColor by animateColorAsState(
+                            targetValue = if (isFinished) colors.dock else colors.outline.copy(alpha = 0.35f),
+                            label = "stepBarColor"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(barColor)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -411,112 +492,139 @@ fun SetWizardScreen(
             when (currentStep) {
                 1 -> {
                     item {
-                        Text("What should we protect?", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "Select the folders on your phone you want backed up to your SSD.",
+                            text = "What should we protect?",
+                            style = DockHeadline,
+                            color = colors.textPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Tap to grant folder access. DockDrop never leaves your device.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
 
                     items(suggestions.size) { index ->
                         val suggestion = suggestions[index]
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(
-                                    1.dp,
-                                    if (suggestion.grantedUri != null) colors.dock else colors.outline,
-                                    RoundedCornerShape(RadiusMd)
-                                )
-                                .clickable {
-                                    if (suggestion.grantedUri == null) {
-                                        activePickingIndex = index
-                                        sourcePickerLauncher.launch(null)
-                                    } else {
-                                        suggestions[index] = suggestion.copy(isSelected = !suggestion.isSelected)
-                                    }
-                                },
-                            colors = CardDefaults.cardColors(containerColor = colors.surface)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = suggestion.isSelected && suggestion.grantedUri != null,
-                                    onCheckedChange = { checked ->
-                                        if (suggestion.grantedUri == null) {
-                                            activePickingIndex = index
-                                            sourcePickerLauncher.launch(null)
-                                        } else {
-                                            suggestions[index] = suggestion.copy(isSelected = checked)
-                                        }
-                                    },
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = colors.dock,
-                                        checkmarkColor = colors.onDock
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(suggestion.label, style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        if (suggestion.grantedUri != null) "Folder access granted ✓" else suggestion.description,
-                                        style = DockBodySmall,
-                                        color = if (suggestion.grantedUri != null) colors.seal else colors.textSecondary
-                                    )
+                        val isGranted = suggestion.grantedUri != null
+                        val isSelected = suggestion.isSelected && isGranted
+
+                        DockSelectableCard(
+                            title = suggestion.label,
+                            subtitle = if (isGranted) "Access granted · Ready for backup" else suggestion.description,
+                            selected = isSelected,
+                            onClick = {
+                                if (!isGranted) {
+                                    activePickingIndex = index
+                                    sourcePickerLauncher.launch(null)
+                                } else {
+                                    suggestions[index] = suggestion.copy(isSelected = !suggestion.isSelected)
                                 }
-                            }
-                        }
+                            },
+                            icon = suggestion.icon,
+                            iconBgColor = suggestion.iconColor.copy(alpha = 0.12f),
+                            iconTintColor = suggestion.iconColor,
+                            trailingBadge = if (isGranted) "Granted ✓" else "Tap to Grant",
+                            modifier = Modifier.padding(vertical = 5.dp)
+                        )
                     }
                 }
 
                 2 -> {
                     item {
                         Text("Where do we back up?", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Select your SSD and pick the DockDrop vault directory.",
+                            "Select your target drive and specify the DockDrop vault folder.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                             colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
-                                Text("CONNECTED DRIVE", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    currentDock?.userLabel ?: "External Storage Device",
-                                    style = DockTitle,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Filesystem: exFAT · Status: Ready",
-                                    style = DockBodySmall,
-                                    color = colors.seal
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("VAULT LOCATION", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                                Spacer(modifier = Modifier.height(8.dp))
-
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(colors.dock.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Storage,
+                                            contentDescription = null,
+                                            tint = colors.dock,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
+                                        Text(
+                                            text = currentDock?.userLabel ?: "External Storage Drive",
+                                            style = DockTitle,
+                                            color = colors.textPrimary
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(colors.seal)
+                                            )
+                                            Text(
+                                                text = "Connected · exFAT filesystem",
+                                                style = DockBodySmall,
+                                                color = colors.seal
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(colors.outline.copy(alpha = 0.35f))
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    "VAULT DESTINATION",
+                                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                    color = colors.textTertiary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(colors.surfaceRaised)
+                                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (vaultTreeUri != null) Icons.Outlined.FolderOpen else Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = if (vaultTreeUri != null) colors.dock else colors.textTertiary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
                                     Text(
-                                        text = if (vaultTreeUri != null) "SSD / DockDrop" else "Not chosen yet",
+                                        text = if (vaultTreeUri != null) "SSD / DockDropVault" else "Choose folder on SSD…",
                                         style = DockBody.copy(fontWeight = FontWeight.Medium),
                                         color = if (vaultTreeUri != null) colors.textPrimary else colors.textTertiary,
                                         modifier = Modifier.weight(1f)
@@ -525,23 +633,54 @@ fun SetWizardScreen(
                                         onClick = { vaultPickerLauncher.launch(null) },
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text(if (vaultTreeUri != null) "Change" else "Choose folder")
+                                        Text(if (vaultTreeUri != null) "Change" else "Choose")
                                     }
                                 }
 
                                 if (isTestingWrite) {
-                                    Spacer(modifier = Modifier.height(14.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = colors.dock, strokeWidth = 2.dp)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Testing write access…", style = DockBodySmall, color = colors.textSecondary)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.dock.copy(alpha = 0.08f))
+                                            .padding(12.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = colors.dock,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            "Benchmarking SSD write throughput…",
+                                            style = DockBodySmall,
+                                            color = colors.dock
+                                        )
                                     }
                                 } else if (vaultTreeUri != null) {
-                                    Spacer(modifier = Modifier.height(14.dp))
-                                    Text(
-                                        "Write test passed · ${String.format("%.1f", writeSpeedMbS)} MB/s",
-                                        style = DockMono.copy(color = colors.seal, fontSize = 12.sp)
-                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.seal.copy(alpha = 0.08f))
+                                            .padding(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.CheckCircle,
+                                            contentDescription = null,
+                                            tint = colors.seal,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Write benchmark passed: ${String.format("%.1f", writeSpeedMbS)} MB/s",
+                                            style = DockMono.copy(color = colors.seal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -551,205 +690,221 @@ fun SetWizardScreen(
                 3 -> {
                     item {
                         Text("Choose how it behaves", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("Three decisions, all with safe defaults.", style = DockBodySmall, color = colors.textSecondary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Safe, non-destructive defaults with full control.", style = DockBodySmall, color = colors.textSecondary)
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Deletion Policy Section
+                        Text(
+                            "WHEN FILES ARE DELETED ON YOUR PHONE",
+                            style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                            color = colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        DockSelectableCard(
+                            title = "Keep on SSD (Recommended)",
+                            subtitle = "Deleted files move to _deleted/ on your SSD so nothing is lost.",
+                            selected = deletionPolicy == DeletionPolicy.KEEP,
+                            onClick = {
+                                deletionPolicy = DeletionPolicy.KEEP
+                                mirrorConfirmed = false
+                            },
+                            icon = Icons.Outlined.Shield,
+                            iconBgColor = colors.dock.copy(alpha = 0.12f),
+                            iconTintColor = colors.dock,
+                            trailingBadge = "Safe",
+                            isRadio = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        DockSelectableCard(
+                            title = "Keep for $retentionDays days",
+                            subtitle = "Deleted items are kept in _deleted/ and auto-purged after $retentionDays days.",
+                            selected = deletionPolicy == DeletionPolicy.KEEP_N_DAYS,
+                            onClick = {
+                                deletionPolicy = DeletionPolicy.KEEP_N_DAYS
+                                mirrorConfirmed = false
+                            },
+                            icon = Icons.Outlined.Folder,
+                            iconBgColor = Color(0xFF6366F1).copy(alpha = 0.12f),
+                            iconTintColor = Color(0xFF6366F1),
+                            isRadio = true
+                        )
+
+                        if (deletionPolicy == DeletionPolicy.KEEP_N_DAYS) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(7, 30, 90).forEach { days ->
+                                    val isSel = retentionDays == days
+                                    OutlinedButton(
+                                        onClick = { retentionDays = days },
+                                        colors = if (isSel) ButtonDefaults.buttonColors(
+                                            containerColor = colors.dock,
+                                            contentColor = colors.onDock
+                                        ) else ButtonDefaults.outlinedButtonColors(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("$days days", style = DockMono.copy(fontSize = 12.sp))
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        DockSelectableCard(
+                            title = "Mirror exactly (Caution)",
+                            subtitle = "Deleting a file on your phone will permanently delete it from the SSD.",
+                            selected = deletionPolicy == DeletionPolicy.MIRROR,
+                            onClick = { showMirrorSheet = true },
+                            icon = Icons.Outlined.Warning,
+                            iconBgColor = colors.danger.copy(alpha = 0.12f),
+                            iconTintColor = colors.danger,
+                            trailingBadge = "Danger",
+                            isRadio = true
+                        )
+
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // 1. Deletion policy card (S07 Card 1)
+                        // Encryption Card
+                        Text(
+                            "SECURITY & ENCRYPTION",
+                            style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                            color = colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                             colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
-                                Text("WHEN FILES ARE DELETED ON YOUR PHONE", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Option 1: KEEP (Default)
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            deletionPolicy = DeletionPolicy.KEEP
-                                            mirrorConfirmed = false
-                                        }
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isEncrypted) colors.seal.copy(alpha = 0.12f) else colors.surfaceRaised),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    RadioButton(
-                                        selected = deletionPolicy == DeletionPolicy.KEEP,
-                                        onClick = {
-                                            deletionPolicy = DeletionPolicy.KEEP
-                                            mirrorConfirmed = false
-                                        },
-                                        colors = RadioButtonDefaults.colors(selectedColor = colors.dock)
+                                    Icon(
+                                        imageVector = Icons.Outlined.Lock,
+                                        contentDescription = null,
+                                        tint = if (isEncrypted) colors.seal else colors.textSecondary,
+                                        modifier = Modifier.size(22.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text("Keep them on the SSD (Recommended)", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                                        Text("Moved to _deleted/ folder so nothing is ever destroyed.", style = DockBodySmall, color = colors.textSecondary)
-                                    }
                                 }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Option 2: KEEP_N_DAYS
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            deletionPolicy = DeletionPolicy.KEEP_N_DAYS
-                                            mirrorConfirmed = false
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Encrypt with Passphrase",
+                                        style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                        color = colors.textPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (isEncrypted) "AES-256-GCM · Recovery key saved" else "Zero-knowledge hardware vault",
+                                        style = DockBodySmall,
+                                        color = if (isEncrypted) colors.seal else colors.textSecondary
+                                    )
+                                }
+                                Switch(
+                                    checked = isEncrypted,
+                                    onCheckedChange = { checked ->
+                                        if (checked) {
+                                            showEncryptionSetup = true
+                                        } else {
+                                            isEncrypted = false
+                                            provisionedEncryption = null
                                         }
-                                ) {
-                                    RadioButton(
-                                        selected = deletionPolicy == DeletionPolicy.KEEP_N_DAYS,
-                                        onClick = {
-                                            deletionPolicy = DeletionPolicy.KEEP_N_DAYS
-                                            mirrorConfirmed = false
-                                        },
-                                        colors = RadioButtonDefaults.colors(selectedColor = colors.dock)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text("Keep for $retentionDays days", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                                        Text("Cleaned up automatically after $retentionDays days.", style = DockBodySmall, color = colors.textSecondary)
-                                    }
-                                }
-
-                                if (deletionPolicy == DeletionPolicy.KEEP_N_DAYS) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.padding(start = 40.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        listOf(7, 30, 90).forEach { days ->
-                                            val isSel = retentionDays == days
-                                            OutlinedButton(
-                                                onClick = { retentionDays = days },
-                                                colors = if (isSel) ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock) else ButtonDefaults.outlinedButtonColors(),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Text("$days days", style = DockMono.copy(fontSize = 12.sp))
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Option 3: MIRROR (Danger tint)
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { showMirrorSheet = true }
-                                ) {
-                                    RadioButton(
-                                        selected = deletionPolicy == DeletionPolicy.MIRROR,
-                                        onClick = { showMirrorSheet = true },
-                                        colors = RadioButtonDefaults.colors(selectedColor = colors.danger)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text("Mirror exactly", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.danger)
-                                        Text("Removes files from SSD when deleted on phone.", style = DockBodySmall, color = colors.textSecondary)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // Live consequence line
-                                Text(
-                                    text = when (deletionPolicy) {
-                                        DeletionPolicy.KEEP -> "Result: Deleted files move to _deleted/<Set>/<date>/ and stay forever."
-                                        DeletionPolicy.KEEP_N_DAYS -> "Result: Deleted files move to _deleted/ and are purged after $retentionDays days."
-                                        DeletionPolicy.MIRROR -> "Result: Files removed on phone are permanently deleted from the SSD."
                                     },
-                                    style = DockBodySmall.copy(fontSize = 12.sp),
-                                    color = if (deletionPolicy == DeletionPolicy.MIRROR) colors.danger else colors.textTertiary
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = colors.onDock,
+                                        checkedTrackColor = colors.dock
+                                    )
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                        // 2. Encryption Card (S07 Card 2)
+                        // Battery Threshold
+                        Text(
+                            "BATTERY PROTECTION",
+                            style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                            color = colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                             colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text("Protect with a passphrase", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                                        Spacer(modifier = Modifier.height(4.dp))
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.surfaceRaised),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.BatteryChargingFull,
+                                            contentDescription = null,
+                                            tint = colors.dock,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
                                         Text(
-                                            "Encrypts this backup. If you lose both the passphrase and the recovery key, the backup can't be opened. This can't be turned on later without a new backup.",
+                                            "Minimum Battery Level",
+                                            style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                            color = colors.textPrimary
+                                        )
+                                        Text(
+                                            "Pauses backup if battery drops below this limit.",
                                             style = DockBodySmall,
                                             color = colors.textSecondary
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Switch(
-                                        checked = isEncrypted,
-                                        onCheckedChange = { checked ->
-                                            if (checked) {
-                                                showEncryptionSetup = true
-                                            } else {
-                                                isEncrypted = false
-                                                provisionedEncryption = null
-                                            }
-                                        },
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = colors.onDock,
-                                            checkedTrackColor = colors.dock
-                                        )
-                                    )
                                 }
-
-                                if (isEncrypted) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Result: Protected with AES-256-GCM. Recovery key generated.",
-                                        style = DockBodySmall.copy(fontSize = 12.sp),
-                                        color = colors.seal
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // 3. Battery threshold card (S07 Card 3)
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
-                            colors = CardDefaults.cardColors(containerColor = colors.surface)
-                        ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
-                                Text("ONLY BACK UP WHEN BATTERY IS ABOVE", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     listOf(15, 20, 30, 100).forEach { pct ->
                                         val sel = minBatteryPct == pct
                                         val label = if (pct == 100) "Charging only" else "$pct%"
                                         OutlinedButton(
                                             onClick = { minBatteryPct = pct },
-                                            colors = if (sel) ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock) else ButtonDefaults.outlinedButtonColors(),
+                                            modifier = Modifier.weight(1f),
+                                            colors = if (sel) ButtonDefaults.buttonColors(
+                                                containerColor = colors.dock,
+                                                contentColor = colors.onDock
+                                            ) else ButtonDefaults.outlinedButtonColors(),
                                             shape = RoundedCornerShape(10.dp)
                                         ) {
-                                            Text(label, style = DockMono)
+                                            Text(label, style = DockMono.copy(fontSize = 12.sp))
                                         }
                                     }
                                 }
@@ -760,15 +915,15 @@ fun SetWizardScreen(
 
                 4 -> {
                     item {
-                        Text("Review and create", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("Give your backup set a name and confirm your settings.", style = DockBodySmall, color = colors.textSecondary)
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Text("Review and name", style = DockHeadline, color = colors.textPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Confirm your configuration and give your set a friendly name.", style = DockBodySmall, color = colors.textSecondary)
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         OutlinedTextField(
                             value = setName,
                             onValueChange = { setName = it },
-                            label = { Text("Set Name") },
+                            label = { Text("Backup Set Name") },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = colors.dock,
@@ -778,48 +933,109 @@ fun SetWizardScreen(
                             shape = RoundedCornerShape(14.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                             colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
-                                Text("SUMMARY", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Folders protected:", style = DockBodySmall, color = colors.textSecondary)
-                                suggestions.filter { it.isSelected && it.grantedUri != null }.forEach {
-                                    Text("• ${it.label}", style = DockBody.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text("SSD: ${currentDock?.userLabel ?: "External SSD"}", style = DockBodySmall, color = colors.textSecondary)
-
-                                val policyText = when (deletionPolicy) {
-                                    DeletionPolicy.KEEP -> "Keep deleted files in _deleted/"
-                                    DeletionPolicy.KEEP_N_DAYS -> "Keep for $retentionDays days in _deleted/"
-                                    DeletionPolicy.MIRROR -> "Mirror exactly (deletions purged from SSD)"
-                                }
-                                Text("Policy: $policyText", style = DockBodySmall, color = if (deletionPolicy == DeletionPolicy.MIRROR) colors.danger else colors.textSecondary)
-
-                                val encText = if (isEncrypted) "Encrypted (AES-256-GCM · Passphrase & Recovery Key)" else "Unencrypted (Plain mirror folders)"
-                                Text("Encryption: $encText", style = DockBodySmall, color = if (isEncrypted) colors.seal else colors.textSecondary)
-
-                                Text("Verification: size + SHA-256 on copy + re-read", style = DockBodySmall, color = colors.seal)
-
-                                Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    "First backup: writes all selected files. Later backups take seconds and copy zero unchanged bytes.",
-                                    style = DockBodySmall,
+                                    "BACKUP CONFIGURATION",
+                                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                                     color = colors.textTertiary
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = colors.dock,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Protected Folders",
+                                        style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                        color = colors.textPrimary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                suggestions.filter { it.isSelected && it.grantedUri != null }.forEach {
+                                    Text(
+                                        "  • ${it.label}",
+                                        style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
+                                        color = colors.textSecondary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(colors.outline.copy(alpha = 0.35f))
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Destination", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(currentDock?.userLabel ?: "External SSD", style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Deletion Policy", style = DockBodySmall, color = colors.textSecondary)
+                                    val policyLabel = when (deletionPolicy) {
+                                        DeletionPolicy.KEEP -> "Keep forever"
+                                        DeletionPolicy.KEEP_N_DAYS -> "$retentionDays days"
+                                        DeletionPolicy.MIRROR -> "Mirror (Permanent deletion)"
+                                    }
+                                    Text(policyLabel, style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold), color = if (deletionPolicy == DeletionPolicy.MIRROR) colors.danger else colors.textPrimary)
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Security", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(
+                                        if (isEncrypted) "AES-256-GCM Encrypted" else "Plain Mirror",
+                                        style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = if (isEncrypted) colors.seal else colors.textPrimary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Integrity", style = DockBodySmall, color = colors.textSecondary)
+                                    Text("SHA-256 + Re-read Check", style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold), color = colors.seal)
+                                }
                             }
                         }
                     }
                 }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
     }

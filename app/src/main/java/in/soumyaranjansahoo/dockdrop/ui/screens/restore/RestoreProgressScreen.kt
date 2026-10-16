@@ -5,12 +5,6 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,10 +19,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Verified
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,15 +47,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import `in`.soumyaranjansahoo.dockdrop.core.model.DropProgress
 import `in`.soumyaranjansahoo.dockdrop.core.model.DropState
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlan
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreProgress
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreReceipt
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreState
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DockHero
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DropParticles
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
@@ -89,27 +100,24 @@ fun RestoreProgressScreen(
         containerColor = colors.bg,
         topBar = {
             if (receipt == null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (plan.isDrill) "Restore Drill" else "Restoring ${plan.setName}",
-                        style = DockTitle,
-                        color = colors.textPrimary
-                    )
-                    TextButton(onClick = onStopClick) {
-                        Text("Cancel", style = DockBodySmall, color = colors.danger)
+                DockTopAppBar(
+                    title = if (plan.isDrill) "Restore Drill" else "Restoring ${plan.setName}",
+                    subtitle = "Safe copy in progress",
+                    actions = {
+                        TextButton(onClick = onStopClick) {
+                            Text(
+                                "Cancel",
+                                style = DockBodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = colors.danger
+                            )
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->
         if (receipt != null) {
-            // Restore Receipt View (SCREENS.md S15 / S10 format)
+            // Restore Receipt View
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -128,7 +136,6 @@ fun RestoreProgressScreen(
                         try {
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            // fallback open general files
                             val filesIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
                                 type = "*/*"
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -139,7 +146,7 @@ fun RestoreProgressScreen(
                 )
             }
         } else {
-            // Live Restore Progress View (Mirror of S09 with reverse particles)
+            // Live Restore Progress View (with reverse upward particles)
             val pctBucket = ((progress?.percentage ?: 0) / 10) * 10
             Column(
                 modifier = Modifier
@@ -149,9 +156,9 @@ fun RestoreProgressScreen(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Upward particle flow from Dock to Phone (DESIGN.md §5.2.2 / SCREENS.md S15)
+                // Upward particle flow from Dock to Phone
                 val speed = progress?.filesPerSec ?: 0.0
                 val curFile = progress?.currentFilePath ?: ""
                 DropParticles(
@@ -162,30 +169,33 @@ fun RestoreProgressScreen(
                 )
 
                 val pct = (progress?.percentage ?: 0) / 100f
-                DockHero(state = DropState.Dropping(
-                    `in`.soumyaranjansahoo.dockdrop.core.model.DropProgress(
-                        setId = plan.setId,
-                        currentFolder = progress?.currentFolder ?: "",
-                        folderIndex = progress?.folderIndex ?: 1,
-                        totalFolders = progress?.totalFolders ?: 1,
-                        copiedFiles = progress?.restoredFiles ?: 0,
-                        totalFiles = progress?.totalFiles ?: plan.totalFilesToCopy,
-                        copiedBytes = progress?.restoredBytes ?: 0L,
-                        totalBytes = progress?.totalBytes ?: plan.totalBytesToCopy,
-                        speedMbS = progress?.speedMbS ?: 0.0,
-                        filesPerSec = progress?.filesPerSec ?: 0.0,
-                        estMinutesRemaining = progress?.estMinutesRemaining ?: 0.0,
-                        currentFilePath = progress?.currentFilePath ?: ""
-                    )
-                ), progressPct = pct)
+                DockHero(
+                    state = DropState.Dropping(
+                        DropProgress(
+                            setId = plan.setId,
+                            currentFolder = progress?.currentFolder ?: "",
+                            folderIndex = progress?.folderIndex ?: 1,
+                            totalFolders = progress?.totalFolders ?: 1,
+                            copiedFiles = progress?.restoredFiles ?: 0,
+                            totalFiles = progress?.totalFiles ?: plan.totalFilesToCopy,
+                            copiedBytes = progress?.restoredBytes ?: 0L,
+                            totalBytes = progress?.totalBytes ?: plan.totalBytesToCopy,
+                            speedMbS = progress?.speedMbS ?: 0.0,
+                            filesPerSec = progress?.filesPerSec ?: 0.0,
+                            estMinutesRemaining = progress?.estMinutesRemaining ?: 0.0,
+                            currentFilePath = progress?.currentFilePath ?: ""
+                        )
+                    ),
+                    progressPct = pct
+                )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 if (restoreState is RestoreState.UpdatingGallery) {
-                    Text("Updating your gallery…", style = DockHeadline, color = colors.dock)
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("Updating media library…", style = DockHeadline, color = colors.dock)
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Registering restored photos and videos with the system",
+                        "Registering restored photos & videos with the Android MediaStore",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
@@ -199,22 +209,24 @@ fun RestoreProgressScreen(
                             contentDescription = "Restoring ${progress.currentFolder}, $pctBucket percent complete"
                         }
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${progress.restoredFiles} / ${progress.totalFiles} files · ${formatBytes(progress.restoredBytes)} / ${formatBytes(progress.totalBytes)}",
-                        style = DockMono.copy(fontSize = 14.sp),
+                        style = DockMono.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
                         color = colors.textSecondary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "about ${String.format("%.1f", progress.estMinutesRemaining)} min left",
-                        style = DockMono.copy(color = colors.dock, fontSize = 13.sp)
+                        text = "about ${String.format("%.1f", progress.estMinutesRemaining)} min remaining",
+                        style = DockMono.copy(color = colors.dock, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     )
                 } else {
                     Text("Preparing restore…", style = DockHeadline, color = colors.textPrimary)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Testing destination and verifying hashes", style = DockBodySmall, color = colors.textSecondary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Preflight checks & SHA-256 verification…", style = DockBodySmall, color = colors.textSecondary)
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -227,28 +239,29 @@ private fun RestoreReceiptCard(
     onOpenFiles: () -> Unit
 ) {
     val colors = DockTheme.colors
-    val context = LocalContext.current
-
-    val stampScale = remember { Animatable(1.18f) }
+    val stampScale = remember { Animatable(1.22f) }
     LaunchedEffect(Unit) {
         stampScale.animateTo(1f, animationSpec = DockMotion.Snap)
     }
 
+    val isSuccess = receipt.isCompleteSuccess
+    val stampColor = if (isSuccess) colors.seal else colors.attention
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(RadiusLg))
+            .clip(RoundedCornerShape(24.dp))
             .background(colors.surface)
-            .border(1.dp, colors.outline, RoundedCornerShape(RadiusLg))
+            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
     ) {
         // Perforated top border
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(16.dp)
+                .height(18.dp)
         ) {
-            val holeRadius = 3.dp.toPx()
-            val spacing = 14.dp.toPx()
+            val holeRadius = 3.5.dp.toPx()
+            val spacing = 16.dp.toPx()
             val count = (size.width / spacing).toInt()
             for (i in 0..count) {
                 drawCircle(
@@ -262,61 +275,81 @@ private fun RestoreReceiptCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val stampColor = if (receipt.isCompleteSuccess) colors.seal else colors.attention
             Box(
                 modifier = Modifier
                     .scale(stampScale.value)
-                    .border(2.dp, stampColor, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(stampColor.copy(alpha = 0.12f))
+                    .border(1.5.dp, stampColor, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (receipt.isCompleteSuccess) "RESTORED" else "PARTIAL",
-                    style = DockMono.copy(fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
-                    color = stampColor
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isSuccess) Icons.Outlined.Verified else Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = stampColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (isSuccess) "RESTORE SEALED" else "PARTIAL RESTORE",
+                        style = DockMono.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, fontSize = 12.sp),
+                        color = stampColor
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = if (receipt.isCompleteSuccess) "Restored ${receipt.restoredCount} files" else "Finished with ${receipt.failedCount} failed",
+                text = if (isSuccess) "Restored ${receipt.restoredCount} files" else "Finished with ${receipt.failedCount} failed",
                 style = DockHeadline,
                 color = colors.textPrimary
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Primary Stats Row
+            // Primary Stats Container with Tabular Figures
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.surfaceRaised)
+                    .padding(vertical = 14.dp, horizontal = 10.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${receipt.restoredCount}", style = DockMono.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = colors.textPrimary)
-                    Text("RESTORED", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(formatBytes(receipt.totalBytesRestored), style = DockMono.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = colors.textPrimary)
-                    Text("SIZE", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${receipt.durationSeconds}s", style = DockMono.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = colors.textPrimary)
-                    Text("DURATION", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
-                }
+                StatColumn(label = "RESTORED", value = "${receipt.restoredCount}")
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(colors.outline.copy(alpha = 0.35f))
+                )
+                StatColumn(label = "SIZE", value = formatBytes(receipt.totalBytesRestored))
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(colors.outline.copy(alpha = 0.35f))
+                )
+                StatColumn(label = "DURATION", value = "${receipt.durationSeconds}s")
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-            HorizontalDivider(color = colors.outline)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
+            HorizontalDivider(color = colors.outline.copy(alpha = 0.4f))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Plain Truth Facts (SCREENS.md S15)
-            FactRow(text = "Restored ${receipt.restoredCount} files · ${receipt.keptBothCount} kept both · ${receipt.failedCount} failed")
-            FactRow(text = "Verified: ${receipt.verificationSummary}")
+            // Plain Truth Facts
+            FactRow(text = "Restored ${receipt.restoredCount} files · ${receipt.keptBothCount} kept both")
+            FactRow(text = "Integrity: ${receipt.verificationSummary}")
             if (receipt.timestampsPreservedCount > 0) {
-                FactRow(text = "Original timestamps preserved where platform allowed")
+                FactRow(text = "Original filesystem timestamps preserved")
             }
             if (receipt.isDrill) {
                 FactRow(text = "Restore drill verified 100% hash match on random files")
@@ -329,23 +362,50 @@ private fun RestoreReceiptCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
             ) {
-                Text("Done", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                Text("Done", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
             }
 
             if (!receipt.isDrill) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = onOpenFiles,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Open Files", style = DockBodySmall, color = colors.textSecondary)
+                    Icon(
+                        imageVector = Icons.Outlined.FolderOpen,
+                        contentDescription = null,
+                        tint = colors.dock,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Open Restored Files", style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold), color = colors.dock)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StatColumn(label: String, value: String) {
+    val colors = DockTheme.colors
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = DockMono.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+            color = colors.textPrimary
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = DockMono.copy(fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold),
+            color = colors.textTertiary
+        )
     }
 }
 
@@ -358,7 +418,13 @@ private fun FactRow(text: String) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("• ", color = colors.seal)
+        Icon(
+            imageVector = Icons.Outlined.CheckCircle,
+            contentDescription = null,
+            tint = colors.seal,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
         Text(text, style = DockBodySmall, color = colors.textSecondary)
     }
 }

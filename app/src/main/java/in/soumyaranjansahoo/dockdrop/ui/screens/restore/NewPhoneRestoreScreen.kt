@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,15 +16,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,10 +51,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.DiscoveredBackupSet
 import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
@@ -51,6 +65,7 @@ import `in`.soumyaranjansahoo.dockdrop.core.restore.ConflictPolicy
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreDestination
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlan
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.components.HoldToRestoreButton
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
@@ -74,7 +89,7 @@ fun NewPhoneRestoreScreen(
     setRepository: SetRepository,
     onExecutePlan: (RestorePlan) -> Unit,
     onCancel: () -> Unit,
-    encryptedSetManager: `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager? = null,
+    encryptedSetManager: EncryptedSetManager? = null,
     onPromptUnlock: (DiscoveredBackupSet) -> Unit = {},
     haptics: HapticFeedbackController? = null,
     modifier: Modifier = Modifier
@@ -136,43 +151,22 @@ fun NewPhoneRestoreScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "←",
-                        style = DockTitle.copy(fontSize = 24.sp),
-                        color = colors.textPrimary,
-                        modifier = Modifier
-                            .clickable {
-                                if (step > 1) step-- else onCancel()
-                            }
-                            .padding(end = 12.dp)
-                    )
-                    Text(
-                        text = "New Phone Setup",
-                        style = DockTitle,
-                        color = colors.textPrimary
-                    )
-                }
-
-                // Progress dots (4 steps)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (i in 1..4) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (i == step) colors.dock else if (i < step) colors.seal else colors.outline)
+            DockTopAppBar(
+                title = "New Phone Migration",
+                subtitle = "Step $step of 4",
+                onBackClick = {
+                    if (step > 1) step-- else onCancel()
+                },
+                actions = {
+                    TextButton(onClick = onCancel) {
+                        Text(
+                            "Cancel",
+                            color = colors.textTertiary,
+                            style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }
-            }
+            )
         }
     ) { innerPadding ->
         LazyColumn(
@@ -181,46 +175,119 @@ fun NewPhoneRestoreScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
         ) {
+            // Step Capsule Progress Track
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    for (i in 1..4) {
+                        val isFinished = i <= step
+                        val barColor by animateColorAsState(
+                            targetValue = if (isFinished) colors.dock else colors.outline.copy(alpha = 0.35f),
+                            label = "stepProgress"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(barColor)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
             when (step) {
                 1 -> {
-                    // Step 1: We found a backup (SCREENS.md S16 step 1)
+                    // Step 1: Found backup
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
                         Text("We found a backup", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "This SSD contains files backed up from another device. You can restore them to this phone.",
+                            "This SSD contains files backed up from another device. You can safely migrate them to this phone.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                        Box(
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .background(colors.surface)
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd))
-                                .padding(20.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+                            colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
-                            Column {
-                                Text(backup.setName, style = DockHeadline.copy(fontSize = 22.sp), color = colors.textPrimary)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Device: ${backup.deviceLabel}", style = DockBodySmall, color = colors.dock)
-                                Spacer(modifier = Modifier.height(12.dp))
-                                HorizontalDivider(color = colors.outline)
-                                Spacer(modifier = Modifier.height(12.dp))
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(colors.dock.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.PhoneAndroid,
+                                            contentDescription = null,
+                                            tint = colors.dock,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
+                                        Text(
+                                            backup.setName,
+                                            style = DockTitle.copy(fontSize = 18.sp),
+                                            color = colors.textPrimary
+                                        )
+                                        Text(
+                                            "Source: ${backup.deviceLabel}",
+                                            style = DockBodySmall,
+                                            color = colors.dock
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(colors.outline.copy(alpha = 0.35f))
+                                )
+                                Spacer(modifier = Modifier.height(14.dp))
 
                                 val totalBytes = backup.generation.entries.values.sumOf { it.sizeBytes }
                                 val dateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(Date(backup.lastModifiedMs))
 
-                                Text("${backup.generation.entries.size} files · ${formatBytes(totalBytes)}", style = DockMono, color = colors.textPrimary)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Last sealed: $dateStr", style = DockBodySmall, color = colors.textSecondary)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Archive Volume", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(
+                                        "${backup.generation.entries.size} files · ${formatBytes(totalBytes)}",
+                                        style = DockMono.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+                                        color = colors.textPrimary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Last Sealed", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(dateStr, style = DockMono.copy(fontSize = 12.sp), color = colors.textSecondary)
+                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(30.dp))
 
                         Button(
                             onClick = {
@@ -230,26 +297,31 @@ fun NewPhoneRestoreScreen(
                                     step = 2
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
                         ) {
+                            if (backup.isEncrypted && encryptedSetManager?.isSetUnlocked(backup.setId) != true) {
+                                Icon(imageVector = Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                             Text(
-                                if (backup.isEncrypted && encryptedSetManager?.isSetUnlocked(backup.setId) != true) "Unlock to restore" else "Restore from this backup",
-                                style = DockBody.copy(fontWeight = FontWeight.Bold)
+                                if (backup.isEncrypted && encryptedSetManager?.isSetUnlocked(backup.setId) != true) "Unlock to restore" else "Migrate from this backup",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             )
                         }
                     }
                 }
 
                 2 -> {
-                    // Step 2: Map your folders (SCREENS.md S16 step 2)
+                    // Step 2: Map your folders
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Map your folders", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Map target folders", style = DockHeadline, color = colors.textPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Grant access to where each folder should live on this phone.",
+                            "Grant access to where each backed-up folder should be placed on this phone.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
@@ -261,52 +333,69 @@ fun NewPhoneRestoreScreen(
                         val label = sourceLabels[index]
                         val isGranted = folderMappings.containsKey(label)
 
-                        Box(
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(colors.surface)
-                                .border(1.dp, if (isGranted) colors.seal else colors.outline, RoundedCornerShape(14.dp))
-                                .padding(16.dp)
+                                .padding(vertical = 5.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    1.dp,
+                                    if (isGranted) colors.seal else colors.outline.copy(alpha = 0.5f),
+                                    RoundedCornerShape(16.dp)
+                                ),
+                            colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isGranted) colors.seal.copy(alpha = 0.12f) else colors.surfaceRaised),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isGranted) Icons.Outlined.CheckCircle else Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = if (isGranted) colors.seal else colors.textSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(label, style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(label, style = DockBody.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
                                     Text(
-                                        text = if (isGranted) "Folder granted ✓" else "Needs access on this phone",
-                                        style = DockBodySmall.copy(color = if (isGranted) colors.seal else colors.textTertiary)
+                                        text = if (isGranted) "Access granted ✓" else "Needs folder permission",
+                                        style = DockBodySmall.copy(
+                                            color = if (isGranted) colors.seal else colors.textTertiary,
+                                            fontSize = 12.sp
+                                        )
                                     )
                                 }
 
-                                Button(
+                                OutlinedButton(
                                     onClick = {
                                         activeGrantingFolder = label
                                         folderPickerLauncher.launch(null)
                                     },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isGranted) colors.surfaceRaised else colors.dock,
-                                        contentColor = if (isGranted) colors.textPrimary else colors.onDock
-                                    )
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(if (isGranted) "Change" else "Grant")
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         val allMapped = sourceLabels.all { folderMappings.containsKey(it) }
                         Button(
                             onClick = {
-                                // Persist newly mapped set in local Room database
                                 scope.launch {
                                     val newSet = SetDefinition(
                                         id = backup.setId,
@@ -330,83 +419,115 @@ fun NewPhoneRestoreScreen(
                                 }
                             },
                             enabled = allMapped,
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
                         ) {
-                            Text("Continue to review", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                if (allMapped) "Continue to Review" else "Grant All Folders to Continue",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            )
                         }
                         Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
 
                 3 -> {
-                    // Step 3: Review (SCREENS.md S16 step 3)
+                    // Step 3: Review
                     item {
                         val p = plan
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Review restore", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Review Migration", style = DockHeadline, color = colors.textPrimary)
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Check destination and space before beginning.",
+                            "Check destination and phone storage capacity before copying.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        Box(
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(RadiusMd))
-                                .background(colors.surface)
-                                .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd))
-                                .padding(18.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+                            colors = CardDefaults.cardColors(containerColor = colors.surface)
                         ) {
-                            Column {
-                                Text("Destination: Original mapped folders", style = DockBody.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Policy: Keep both if file exists", style = DockBodySmall, color = colors.textSecondary)
-                                Spacer(modifier = Modifier.height(12.dp))
-                                HorizontalDivider(color = colors.outline)
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Text(
+                                    "PLAN SUMMARY",
+                                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                    color = colors.textTertiary
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text("Destination: Original mapped directories", style = DockBody.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Conflict Rule: Keep both files (non-destructive)", style = DockBodySmall, color = colors.textSecondary)
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(colors.outline.copy(alpha = 0.35f))
+                                )
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 val totalBytes = p?.totalBytesToCopy ?: 0L
                                 val phoneFree = p?.phoneFreeBytes ?: 0L
                                 val enough = p?.hasEnoughSpace ?: true
 
-                                Text("Files to restore: ${p?.totalFilesToCopy ?: 0}", style = DockMono, color = colors.textPrimary)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Needs ${formatBytes(totalBytes)} · ${formatBytes(phoneFree)} free", style = DockMono, color = if (enough) colors.seal else colors.attention)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Files to Restore", style = DockBodySmall, color = colors.textSecondary)
+                                    Text("${p?.totalFilesToCopy ?: 0}", style = DockMono.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Storage Space", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(
+                                        "Needs ${formatBytes(totalBytes)} · ${formatBytes(phoneFree)} free",
+                                        style = DockMono.copy(fontWeight = FontWeight.Bold, color = if (enough) colors.seal else colors.attention)
+                                    )
+                                }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(30.dp))
 
                         Button(
                             onClick = { step = 4 },
                             enabled = plan?.canExecute == true,
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
                         ) {
-                            Text("Ready to restore", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                            Text("Ready to restore", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                         }
                     }
                 }
 
                 4 -> {
-                    // Step 4: Hold to restore (SCREENS.md S16 step 4)
+                    // Step 4: Hold to restore
                     item {
                         val p = plan
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text("Hold to restore", style = DockHeadline, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Press and hold the button below to start copying files to your phone.",
+                            "Press and hold the button below to stream your files to this phone.",
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(36.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
 
                         HoldToRestoreButton(
                             text = "Hold to restore everything",

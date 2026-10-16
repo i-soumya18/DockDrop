@@ -11,10 +11,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,15 +21,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,21 +53,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 
 @Composable
 fun KeepAliveScreen(
@@ -80,7 +88,6 @@ fun KeepAliveScreen(
     }
     var isSleepingAppsConfirmed by remember { mutableStateOf(false) }
 
-    // Re-check permissions when returning from system settings
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -101,11 +108,18 @@ fun KeepAliveScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
+        topBar = {
+            DockTopAppBar(
+                title = "Background Setup",
+                onBackClick = onDoneClick
+            )
+        },
         bottomBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val canFinish = hasNotificationPerm && isBatteryExempt
@@ -114,8 +128,8 @@ fun KeepAliveScreen(
                     enabled = canFinish,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock,
@@ -123,12 +137,20 @@ fun KeepAliveScreen(
                         disabledContentColor = colors.textTertiary
                     )
                 ) {
-                    Text("Done", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        "Done",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 TextButton(onClick = onRemindMeLaterClick) {
-                    Text("Remind me later", style = DockBody.copy(color = colors.textSecondary))
+                    Text(
+                        "Remind me later",
+                        fontSize = 14.sp,
+                        color = colors.textSecondary
+                    )
                 }
             }
         }
@@ -140,30 +162,35 @@ fun KeepAliveScreen(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Let backups finish with the screen off",
-                style = DockHeadline,
-                color = colors.textPrimary
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary,
+                lineHeight = 28.sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Android and Samsung One UI stop background apps to save power. Complete these steps so your backups don't get interrupted.",
-                style = DockBodySmall,
-                color = colors.textSecondary
+                fontSize = 13.sp,
+                color = colors.textSecondary,
+                lineHeight = 19.sp
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Step 1: Notifications
-            StepCard(
-                stepNumber = "1",
+            GoogleStepCard(
+                icon = Icons.Outlined.Notifications,
+                iconBg = Color(0xFFEFF6FF),
+                iconTint = Color(0xFF2563EB),
                 title = "Allow notifications",
-                description = "Required on Android 13+ to show progress and keep the backup alive.",
+                description = "Required to display live backup progress and keep the transfer service alive.",
                 isDone = hasNotificationPerm,
-                actionLabel = if (hasNotificationPerm) "Allowed ✓" else "Allow",
+                actionLabel = "Allow",
                 onActionClick = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -173,15 +200,17 @@ fun KeepAliveScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Step 2: Battery optimization exemption
-            StepCard(
-                stepNumber = "2",
+            GoogleStepCard(
+                icon = Icons.Outlined.BatteryChargingFull,
+                iconBg = Color(0xFFECFDF5),
+                iconTint = Color(0xFF10B981),
                 title = "Don't restrict battery",
-                description = "Allows DockDrop to copy and verify files when your screen is locked.",
+                description = "Allows DockDrop to stream and verify files when your phone screen is locked.",
                 isDone = isBatteryExempt,
-                actionLabel = if (isBatteryExempt) "Unrestricted ✓" else "Set unrestricted",
+                actionLabel = "Configure",
                 onActionClick = {
                     if (!isBatteryExempt) {
                         requestBatteryOptimizationExemption(context)
@@ -189,24 +218,28 @@ fun KeepAliveScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Step 3: Samsung Sleeping Apps
             SamsungStepCard(
-                stepNumber = "3",
+                icon = Icons.Outlined.PowerSettingsNew,
                 title = "Remove from Sleeping apps (Samsung)",
-                description = "Check that Samsung Device Care doesn't put DockDrop into 'Sleeping apps' or 'Deep sleeping apps'.",
+                description = "Ensure Samsung Device Care doesn't put DockDrop into 'Sleeping apps' or 'Deep sleeping apps'.",
                 isConfirmed = isSleepingAppsConfirmed,
                 onCheckedChange = { isSleepingAppsConfirmed = it },
                 onOpenSettingsClick = { openAppSettings(context) }
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-private fun StepCard(
-    stepNumber: String,
+private fun GoogleStepCard(
+    icon: ImageVector,
+    iconBg: Color,
+    iconTint: Color,
     title: String,
     description: String,
     isDone: Boolean,
@@ -214,65 +247,101 @@ private fun StepCard(
     onActionClick: () -> Unit
 ) {
     val colors = DockTheme.colors
-    Box(
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
-                stateDescription = if (isDone) "Completed" else "Action required"
-            }
-            .clip(RoundedCornerShape(RadiusMd))
-            .background(colors.surface)
+            .clip(RoundedCornerShape(16.dp))
             .border(
                 1.dp,
-                if (isDone) colors.seal.copy(alpha = 0.5f) else colors.outline,
-                RoundedCornerShape(RadiusMd)
+                if (isDone) colors.seal.copy(alpha = 0.4f) else colors.outline.copy(alpha = 0.5f),
+                RoundedCornerShape(16.dp)
             )
-            .padding(16.dp)
+            .semantics(mergeDescendants = true) {
+                stateDescription = if (isDone) "Completed" else "Action required"
+            },
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(if (isDone) colors.seal.copy(alpha = 0.2f) else colors.surfaceRaised),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDone) Color(0xFFDCFCE7) else iconBg),
                 contentAlignment = Alignment.Center
             ) {
+                if (isDone) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Done",
+                        tint = Color(0xFF15803D),
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isDone) "✓" else stepNumber,
-                    style = DockTitle.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                    color = if (isDone) colors.seal else colors.textPrimary
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = description,
+                    fontSize = 13.sp,
+                    color = colors.textSecondary,
+                    lineHeight = 18.sp
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = DockTitle.copy(fontSize = 16.sp), color = colors.textPrimary)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = description, style = DockBodySmall, color = colors.textSecondary)
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             if (!isDone) {
                 Button(
                     onClick = onActionClick,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock
                     )
                 ) {
-                    Text(actionLabel, style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        actionLabel,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             } else {
-                Text(
-                    text = "Done ✓",
-                    style = DockMono.copy(color = colors.seal, fontSize = 12.sp)
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFDCFCE7))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Allowed ✓",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF15803D)
+                    )
+                }
             }
         }
     }
@@ -280,7 +349,7 @@ private fun StepCard(
 
 @Composable
 private fun SamsungStepCard(
-    stepNumber: String,
+    icon: ImageVector,
     title: String,
     description: String,
     isConfirmed: Boolean,
@@ -288,74 +357,95 @@ private fun SamsungStepCard(
     onOpenSettingsClick: () -> Unit
 ) {
     val colors = DockTheme.colors
-    Box(
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
-                stateDescription = if (isConfirmed) "Confirmed" else "Confirmation needed"
-            }
-            .clip(RoundedCornerShape(RadiusMd))
-            .background(colors.surface)
+            .clip(RoundedCornerShape(16.dp))
             .border(
                 1.dp,
-                if (isConfirmed) colors.seal.copy(alpha = 0.5f) else colors.outline,
-                RoundedCornerShape(RadiusMd)
-            )
-            .padding(16.dp)
+                if (isConfirmed) colors.seal.copy(alpha = 0.4f) else colors.outline.copy(alpha = 0.5f),
+                RoundedCornerShape(16.dp)
+            ),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (isConfirmed) colors.seal.copy(alpha = 0.2f) else colors.surfaceRaised),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F3FF)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (isConfirmed) "✓" else stepNumber,
-                        style = DockTitle.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                        color = if (isConfirmed) colors.seal else colors.textPrimary
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color(0xFF8B5CF6),
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, style = DockTitle.copy(fontSize = 16.sp), color = colors.textPrimary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = description, style = DockBodySmall, color = colors.textSecondary)
+                    Text(
+                        text = title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = description,
+                        fontSize = 13.sp,
+                        color = colors.textSecondary,
+                        lineHeight = 18.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.surfaceRaised)
+                    .clickable { onCheckedChange(!isConfirmed) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onOpenSettingsClick) {
-                    Text("Open App Settings", style = DockBodySmall.copy(color = colors.dock))
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onCheckedChange(!isConfirmed) }
-                ) {
-                    Checkbox(
-                        checked = isConfirmed,
-                        onCheckedChange = onCheckedChange,
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = colors.seal,
-                            uncheckedColor = colors.outline
-                        )
+                Checkbox(
+                    checked = isConfirmed,
+                    onCheckedChange = onCheckedChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = colors.seal,
+                        checkmarkColor = colors.onDock
                     )
-                    Text("Confirmed", style = DockBodySmall, color = colors.textSecondary)
-                }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "I confirmed DockDrop is not in Sleeping apps",
+                    fontSize = 12.sp,
+                    color = colors.textPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onOpenSettingsClick,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text(
+                    text = "Open App Settings →",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.dock
+                )
             }
         }
     }
@@ -373,8 +463,8 @@ private fun checkNotificationPermission(context: Context): Boolean {
 }
 
 private fun checkBatteryOptimization(context: Context): Boolean {
-    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-    return pm.isIgnoringBatteryOptimizations(context.packageName)
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+    return powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: false
 }
 
 private fun requestBatteryOptimizationExemption(context: Context) {
@@ -384,14 +474,17 @@ private fun requestBatteryOptimizationExemption(context: Context) {
         }
         context.startActivity(intent)
     } catch (_: Exception) {
-        openAppSettings(context)
+        try {
+            val genericIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            context.startActivity(genericIntent)
+        } catch (_: Exception) {}
     }
 }
 
 private fun openAppSettings(context: Context) {
     try {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:${context.packageName}")
+            data = Uri.fromParts("package", context.packageName, null)
         }
         context.startActivity(intent)
     } catch (_: Exception) {}

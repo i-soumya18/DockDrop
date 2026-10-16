@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,16 +17,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.SkipNext
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,6 +66,8 @@ import `in`.soumyaranjansahoo.dockdrop.core.restore.ConflictPolicy
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreDestination
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlan
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockSelectableCard
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
@@ -85,7 +105,6 @@ fun RestorePreviewScreen(
 
     var activeGrantingFolder by remember { mutableStateOf<String?>(null) }
 
-    // Folder Picker for granting missing folders
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -109,7 +128,6 @@ fun RestorePreviewScreen(
     var plan by remember { mutableStateOf<RestorePlan?>(null) }
     var isRecalculating by remember { mutableStateOf(true) }
 
-    // Rebuild plan whenever destination or policy changes
     LaunchedEffect(isOriginalDestination, customFolderUri, conflictPolicy, folderMappings.toMap()) {
         isRecalculating = true
         scope.launch {
@@ -143,22 +161,11 @@ fun RestorePreviewScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "←",
-                    style = DockTitle.copy(fontSize = 24.sp),
-                    color = colors.textPrimary,
-                    modifier = Modifier
-                        .clickable { onBackClick() }
-                        .padding(end = 12.dp)
-                )
-                Text("Restore Preview", style = DockTitle, color = colors.textPrimary)
-            }
+            DockTopAppBar(
+                title = "Restore Preview",
+                subtitle = "${selectedEntries.size} items selected",
+                onBackClick = onBackClick
+            )
         },
         bottomBar = {
             val p = plan
@@ -167,9 +174,8 @@ fun RestorePreviewScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(colors.surface)
-                    .border(1.dp, colors.outline)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Button(
                     onClick = {
@@ -179,7 +185,7 @@ fun RestorePreviewScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock,
@@ -188,14 +194,14 @@ fun RestorePreviewScreen(
                     )
                 ) {
                     val label = when {
-                        isRecalculating -> "Calculating…"
+                        isRecalculating -> "Calculating Plan…"
                         p == null -> "Preparing…"
-                        p.permissionGaps.isNotEmpty() -> "Grant missing folders first"
-                        !p.hasEnoughSpace -> "Not enough space on phone"
-                        p.totalFilesToCopy == 0 -> "0 files to copy"
-                        else -> "Restore ${p.totalFilesToCopy} files"
+                        p.permissionGaps.isNotEmpty() -> "Grant Missing Folders First"
+                        !p.hasEnoughSpace -> "Insufficient Storage Space"
+                        p.totalFilesToCopy == 0 -> "0 Files to Copy"
+                        else -> "Start Restore · ${p.totalFilesToCopy} files"
                     }
-                    Text(label, style = DockBody.copy(fontWeight = FontWeight.Bold))
+                    Text(label, style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                 }
             }
         }
@@ -206,163 +212,229 @@ fun RestorePreviewScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
         ) {
-            // 1. Summary Header
+            // Summary Header Card
             item {
+                Spacer(modifier = Modifier.height(8.dp))
                 val totalSelected = selectedEntries.size
                 val totalBytes = selectedEntries.sumOf { it.sizeBytes }
-                Text(
-                    text = "$totalSelected files · ${formatBytes(totalBytes)}",
-                    style = DockHeadline,
-                    color = colors.textPrimary
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-            }
 
-            // 2. Destination Segmented Control
-            item {
-                Text("Destination", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.surface)
-                        .border(1.dp, colors.outline, RoundedCornerShape(14.dp))
-                        .padding(4.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface)
                 ) {
-                    SegmentButton(
-                        text = "Original folders",
-                        isSelected = isOriginalDestination,
-                        modifier = Modifier.weight(1f),
-                        onClick = { isOriginalDestination = true }
-                    )
-                    SegmentButton(
-                        text = "Choose folder",
-                        isSelected = !isOriginalDestination,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            isOriginalDestination = false
-                            if (customFolderUri == null) {
-                                folderPickerLauncher.launch(null)
-                            }
-                        }
-                    )
-                }
-
-                if (!isOriginalDestination) {
-                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surfaceRaised)
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = customFolderLabel ?: "No folder selected",
-                            style = DockMono.copy(fontSize = 13.sp),
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = "Change",
-                            style = DockBodySmall.copy(color = colors.dock, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.clickable { folderPickerLauncher.launch(null) }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.dock.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.FolderOpen,
+                                contentDescription = null,
+                                tint = colors.dock,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "$totalSelected files selected",
+                                style = DockTitle.copy(fontSize = 17.sp),
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Total volume: ${formatBytes(totalBytes)}",
+                                style = DockMono.copy(color = colors.dock, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            // Destination Selector
+            item {
+                Text(
+                    "RESTORE DESTINATION",
+                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    color = colors.textTertiary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                DockSelectableCard(
+                    title = "Original folders (Recommended)",
+                    subtitle = "Puts photos back in DCIM, documents back in Documents, etc.",
+                    selected = isOriginalDestination,
+                    onClick = { isOriginalDestination = true },
+                    icon = Icons.Outlined.Folder,
+                    iconBgColor = colors.dock.copy(alpha = 0.12f),
+                    iconTintColor = colors.dock,
+                    isRadio = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                DockSelectableCard(
+                    title = "Extract to a custom folder",
+                    subtitle = if (!isOriginalDestination && customFolderLabel != null) "Restoring to: $customFolderLabel" else "Choose a single directory on your phone",
+                    selected = !isOriginalDestination,
+                    onClick = {
+                        isOriginalDestination = false
+                        if (customFolderUri == null) {
+                            folderPickerLauncher.launch(null)
+                        }
+                    },
+                    icon = Icons.Outlined.DriveFileMove,
+                    iconBgColor = Color(0xFF6366F1).copy(alpha = 0.12f),
+                    iconTintColor = Color(0xFF6366F1),
+                    isRadio = true
+                )
+
+                if (!isOriginalDestination) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { folderPickerLauncher.launch(null) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (customFolderLabel != null) "Change Folder ($customFolderLabel)" else "Choose Target Folder")
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 3. Conflict Policy Segmented Control (Keep both · Skip · Overwrite)
+            // Conflict Policy Selector
             item {
-                Text("If a file already exists", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.surface)
-                        .border(1.dp, colors.outline, RoundedCornerShape(14.dp))
-                        .padding(4.dp)
-                ) {
-                    ConflictSegmentButton(
-                        policy = ConflictPolicy.KEEP_BOTH,
-                        isSelected = conflictPolicy == ConflictPolicy.KEEP_BOTH,
-                        modifier = Modifier.weight(1f),
-                        onClick = { conflictPolicy = ConflictPolicy.KEEP_BOTH }
-                    )
-                    ConflictSegmentButton(
-                        policy = ConflictPolicy.SKIP,
-                        isSelected = conflictPolicy == ConflictPolicy.SKIP,
-                        modifier = Modifier.weight(1f),
-                        onClick = { conflictPolicy = ConflictPolicy.SKIP }
-                    )
-                    ConflictSegmentButton(
-                        policy = ConflictPolicy.OVERWRITE,
-                        isSelected = conflictPolicy == ConflictPolicy.OVERWRITE,
-                        modifier = Modifier.weight(1f),
-                        onClick = { conflictPolicy = ConflictPolicy.OVERWRITE }
-                    )
-                }
+                Text(
+                    "IF A FILE ALREADY EXISTS ON PHONE",
+                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    color = colors.textTertiary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Conflict summary line
+                DockSelectableCard(
+                    title = "Keep both (Recommended)",
+                    subtitle = "Appends (1) to restored file so nothing is overwritten.",
+                    selected = conflictPolicy == ConflictPolicy.KEEP_BOTH,
+                    onClick = { conflictPolicy = ConflictPolicy.KEEP_BOTH },
+                    icon = Icons.Outlined.ContentCopy,
+                    iconBgColor = colors.dock.copy(alpha = 0.12f),
+                    iconTintColor = colors.dock,
+                    trailingBadge = "Safe",
+                    isRadio = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                DockSelectableCard(
+                    title = "Skip existing",
+                    subtitle = "Does not overwrite files that already exist on your phone.",
+                    selected = conflictPolicy == ConflictPolicy.SKIP,
+                    onClick = { conflictPolicy = ConflictPolicy.SKIP },
+                    icon = Icons.Outlined.SkipNext,
+                    iconBgColor = colors.surfaceRaised,
+                    iconTintColor = colors.textSecondary,
+                    isRadio = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                DockSelectableCard(
+                    title = "Overwrite existing (Caution)",
+                    subtitle = "Replaces local file with the version from your SSD.",
+                    selected = conflictPolicy == ConflictPolicy.OVERWRITE,
+                    onClick = { conflictPolicy = ConflictPolicy.OVERWRITE },
+                    icon = Icons.Outlined.Warning,
+                    iconBgColor = colors.danger.copy(alpha = 0.12f),
+                    iconTintColor = colors.danger,
+                    trailingBadge = "Destructive",
+                    isRadio = true
+                )
+
                 val p = plan
                 if (p != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = if (p.conflictCount > 0) {
-                            "${p.conflictCount} files already exist in destination"
+                            "⚡ ${p.conflictCount} conflicts detected in target destination"
                         } else {
-                            "No conflicts found in destination"
+                            "✓ No filename conflicts found in destination"
                         },
-                        style = DockBodySmall.copy(
+                        style = DockMono.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
                             color = if (p.conflictCount > 0) colors.attention else colors.seal
                         )
                     )
                 }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 4. Permission Gaps (if any)
+            // Permission Gaps
             val p = plan
             if (p != null && p.permissionGaps.isNotEmpty()) {
                 item {
-                    Text("Permissions needed", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary)
+                    Text(
+                        "PERMISSIONS NEEDED",
+                        style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                        color = colors.attention
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Column(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(RadiusMd))
-                            .background(colors.surface)
-                            .border(1.dp, colors.attention, RoundedCornerShape(RadiusMd))
+                            .clip(RoundedCornerShape(18.dp))
+                            .border(1.dp, colors.attention.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+                        colors = CardDefaults.cardColors(containerColor = colors.attention.copy(alpha = 0.05f))
                     ) {
-                        p.permissionGaps.forEachIndexed { idx, gap ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("${gap.folderLabel} folder", style = DockBody.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
-                                    Text("${gap.fileCount} files · ${formatBytes(gap.totalBytes)}", style = DockBodySmall, color = colors.textSecondary)
-                                }
-                                Button(
-                                    onClick = {
-                                        activeGrantingFolder = gap.folderLabel
-                                        folderPickerLauncher.launch(null)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                        Column {
+                            p.permissionGaps.forEachIndexed { idx, gap ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Grant")
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "${gap.folderLabel} Folder",
+                                            style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                            color = colors.textPrimary
+                                        )
+                                        Text(
+                                            "${gap.fileCount} files · ${formatBytes(gap.totalBytes)}",
+                                            style = DockBodySmall,
+                                            color = colors.textSecondary
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            activeGrantingFolder = gap.folderLabel
+                                            folderPickerLauncher.launch(null)
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = colors.dock)
+                                    ) {
+                                        Text("Grant Access", style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold))
+                                    }
                                 }
-                            }
-                            if (idx < p.permissionGaps.size - 1) {
-                                HorizontalDivider(color = colors.outline)
+                                if (idx < p.permissionGaps.size - 1) {
+                                    HorizontalDivider(color = colors.outline.copy(alpha = 0.35f))
+                                }
                             }
                         }
                     }
@@ -370,108 +442,61 @@ fun RestorePreviewScreen(
                 }
             }
 
-            // 5. Space Check Row
+            // Space Preflight Row
             item {
+                Text(
+                    "PHONE STORAGE CHECK",
+                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                    color = colors.textTertiary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
                 val pPlan = plan
                 val phoneFree = pPlan?.phoneFreeBytes ?: 0L
                 val needBytes = pPlan?.totalBytesToCopy ?: 0L
                 val enough = pPlan?.hasEnoughSpace ?: true
 
-                Row(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.surface)
-                        .border(1.dp, if (enough) colors.outline else colors.attention, RoundedCornerShape(12.dp))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (enough) "✓" else "⚠",
-                        style = DockMono.copy(color = if (enough) colors.seal else colors.attention, fontSize = 16.sp),
-                        modifier = Modifier.padding(end = 12.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .border(
+                            1.dp,
+                            if (enough) colors.seal.copy(alpha = 0.5f) else colors.danger.copy(alpha = 0.5f),
+                            RoundedCornerShape(18.dp)
+                        ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (enough) colors.seal.copy(alpha = 0.05f) else colors.danger.copy(alpha = 0.05f)
                     )
-                    Column {
-                        Text(
-                            text = "Needs ${formatBytes(needBytes)}, ${formatBytes(phoneFree)} free on your phone",
-                            style = DockBody.copy(fontWeight = FontWeight.Medium),
-                            color = if (enough) colors.textPrimary else colors.attention
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (enough) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
+                            contentDescription = null,
+                            tint = if (enough) colors.seal else colors.danger,
+                            modifier = Modifier.size(24.dp)
                         )
-                        if (!enough) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                text = "Free up space on your phone to continue with this restore.",
+                                text = "Needs ${formatBytes(needBytes)} · ${formatBytes(phoneFree)} free on phone",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                color = if (enough) colors.textPrimary else colors.danger
+                            )
+                            Text(
+                                text = if (enough) "Sufficient internal storage available" else "Free up space on your device before starting restore",
                                 style = DockBodySmall,
                                 color = colors.textSecondary
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun SegmentButton(
-    text: String,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val colors = DockTheme.colors
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (isSelected) colors.surfaceRaised else colors.surface)
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = DockBodySmall.copy(
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) colors.textPrimary else colors.textSecondary
-            )
-        )
-    }
-}
-
-@Composable
-private fun ConflictSegmentButton(
-    policy: ConflictPolicy,
-    isSelected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val colors = DockTheme.colors
-    val tint = when {
-        !isSelected -> colors.textSecondary
-        policy.isDestructive -> colors.danger
-        else -> colors.textPrimary
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (isSelected) colors.surfaceRaised else colors.surface)
-            .border(
-                if (isSelected && policy.isDestructive) 1.dp else 0.dp,
-                if (isSelected && policy.isDestructive) colors.danger else colors.outline,
-                RoundedCornerShape(10.dp)
-            )
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = policy.displayName,
-            style = DockBodySmall.copy(
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = tint
-            )
-        )
     }
 }
 

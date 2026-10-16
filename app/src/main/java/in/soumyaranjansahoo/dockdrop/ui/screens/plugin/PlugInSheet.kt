@@ -10,21 +10,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,24 +71,25 @@ fun PlugInSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = colors.surface,
-        shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp, top = 8.dp),
+                .padding(bottom = 24.dp, top = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Hero Dock with latching cable
+            // Tactile Hero Dock with latching cable
             DockHero(
                 state = when {
                     isUsbConnecting && dockInfo == null -> DropState.NoDock
                     dockInfo != null -> DropState.DockDetected(dockInfo)
                     else -> dropState
                 },
-                modifier = Modifier.size(160.dp)
+                modifier = Modifier.size(150.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -86,17 +98,17 @@ fun PlugInSheet(
                 // Stage A: Connecting to USB
                 isUsbConnecting && dockInfo == null -> {
                     Text(
-                        text = "Connecting to your SSD…",
+                        text = "Connecting to storage…",
                         style = DockHeadline,
                         color = colors.textPrimary
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Checking filesystem and mounting volume",
+                        text = "Detecting filesystem and mounting drive safely",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
                     TextButton(onClick = onDismiss) {
                         Text("Not now", style = DockBody.copy(color = colors.textSecondary))
                     }
@@ -105,29 +117,58 @@ fun PlugInSheet(
                 // Stage B: Unknown Dock
                 dockInfo != null && matchingSet == null -> {
                     Text(
-                        text = "New drive detected",
+                        text = "External drive connected",
                         style = DockHeadline,
                         color = colors.textPrimary
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${dockInfo.userLabel} · ${formatBytes(dockInfo.freeBytes)} free · ${dockInfo.filesystem}",
-                        style = DockBodySmall,
-                        color = colors.textSecondary
-                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(containerColor = colors.surfaceRaised)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.dock.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Storage, contentDescription = null, tint = colors.dock, modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(dockInfo.userLabel, style = DockBody.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                                Text(
+                                    "${formatBytes(dockInfo.freeBytes)} free · ${dockInfo.filesystem}",
+                                    style = DockMono.copy(fontSize = 12.sp),
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
+
                     Button(
                         onClick = onSetupNewDock,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.dock,
                             contentColor = colors.onDock
                         )
                     ) {
-                        Text("Set up this SSD", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        Text("Set up this SSD", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onDismiss) {
@@ -135,32 +176,34 @@ fun PlugInSheet(
                     }
                 }
 
-                // Stage B: Registered Dock & Resumable
+                // Stage C: Registered Dock & Resumable
                 dockInfo != null && matchingSet != null && dropState is DropState.Resumable -> {
                     Text(
-                        text = "Resume backup",
+                        text = "Resume Backup?",
                         style = DockHeadline,
                         color = colors.textPrimary
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${matchingSet.name} · ${dropState.progress.percentage}% done · ${dropState.progress.totalFiles - dropState.progress.copiedFiles} files left",
+                        text = "${matchingSet.name} · ${dropState.progress.percentage}% completed",
                         style = DockBodySmall,
-                        color = colors.textSecondary
+                        color = colors.dock
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Button(
                         onClick = { onResumeBackup(matchingSet) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.dock,
                             contentColor = colors.onDock
                         )
                     ) {
-                        Text("Resume backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Resume Backup", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onDismiss) {
@@ -168,37 +211,47 @@ fun PlugInSheet(
                     }
                 }
 
-                // Stage B: Registered Dock & Ready to backup
+                // Stage D: Registered Dock & Ready to backup
                 dockInfo != null && matchingSet != null -> {
                     Text(
-                        text = "${dockInfo.userLabel} · ${formatBytes(dockInfo.freeBytes)} free · ${dockInfo.filesystem}",
-                        style = DockTitle.copy(fontWeight = FontWeight.Bold),
+                        text = matchingSet.name,
+                        style = DockHeadline,
                         color = colors.textPrimary
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    val statusText = if (matchingSet.lastSealedMs != null) {
-                        "${matchingSet.name} · tap to check and back up"
-                    } else {
-                        "${matchingSet.name} · first backup ready"
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(colors.seal)
+                        )
+                        Text(
+                            text = "${dockInfo.userLabel} · ${formatBytes(dockInfo.freeBytes)} free",
+                            style = DockBodySmall,
+                            color = colors.seal
+                        )
                     }
-                    Text(
-                        text = statusText,
-                        style = DockBodySmall,
-                        color = colors.textSecondary
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     Button(
                         onClick = { onStartBackup(matchingSet) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.dock,
                             contentColor = colors.onDock
                         )
                     ) {
-                        Text("Start backup", style = DockBody.copy(fontWeight = FontWeight.SemiBold))
+                        Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Start Backup Now", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onDismiss) {

@@ -1,6 +1,12 @@
 package `in`.soumyaranjansahoo.dockdrop.ui.screens.drop
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,21 +18,34 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +71,7 @@ import `in`.soumyaranjansahoo.dockdrop.core.model.DropState
 import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DockHero
+import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DropParticles
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
@@ -54,13 +80,6 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
-
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,70 +105,133 @@ fun DropScreen(
         else -> null
     }
 
+    val infiniteTransition = rememberInfiniteTransition(label = "pulseTransition")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "←",
-                        style = DockTitle.copy(fontSize = 24.sp),
-                        color = colors.textPrimary,
+            DockTopAppBar(
+                title = set.name,
+                subtitle = "Active Backup",
+                onBackClick = onBackClick,
+                actions = {
+                    Box(
                         modifier = Modifier
-                            .padding(8.dp)
-                            .clickable { onBackClick() }
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = set.name, style = DockTitle, color = colors.textPrimary)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.surfaceRaised)
+                            .clickable { showDetails = !showDetails }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = if (showDetails) colors.dock else colors.textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (showDetails) "Hide Info" else "Telemetry",
+                                style = DockBodySmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (showDetails) colors.dock else colors.textSecondary
+                                )
+                            )
+                        }
+                    }
                 }
-
-                Text(
-                    text = if (showDetails) "Hide Details" else "Details",
-                    style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
-                    color = colors.dock,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clickable { showDetails = !showDetails }
-                )
-            }
+            )
         },
         bottomBar = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "You can lock your phone. Backup keeps going.",
-                    style = DockBodySmall,
+                    text = "Screen can be locked · DockDrop runs in the background",
+                    style = DockBodySmall.copy(fontSize = 12.sp),
                     color = colors.textTertiary
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
+                // Floating Action Pill
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(colors.surface)
+                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (dropState is DropState.Paused) {
-                        TextButton(onClick = onResumeClick) {
-                            Text("Resume", style = DockBody.copy(color = colors.dock, fontWeight = FontWeight.SemiBold))
+                        Button(
+                            onClick = onResumeClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.dock)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.PlayArrow,
+                                contentDescription = null,
+                                tint = colors.onDock,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Resume", style = DockBody.copy(color = colors.onDock, fontWeight = FontWeight.Bold))
                         }
                     } else if (dropState is DropState.Dropping) {
-                        TextButton(onClick = onPauseClick) {
-                            Text("Pause", style = DockBody.copy(color = colors.textSecondary))
+                        OutlinedButton(
+                            onClick = onPauseClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Pause,
+                                contentDescription = null,
+                                tint = colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Pause", style = DockBody.copy(color = colors.textPrimary, fontWeight = FontWeight.SemiBold))
                         }
                     }
 
-                    TextButton(onClick = { showStopConfirmSheet = true }) {
-                        Text("Stop", style = DockBody.copy(color = colors.danger))
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    OutlinedButton(
+                        onClick = { showStopConfirmSheet = true },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Stop,
+                            contentDescription = null,
+                            tint = colors.danger,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Stop", style = DockBody.copy(color = colors.danger, fontWeight = FontWeight.SemiBold))
                     }
                 }
             }
@@ -164,7 +246,7 @@ fun DropScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Live Particle Data Flow Area
             val speed = progress?.filesPerSec ?: 0.0
@@ -175,13 +257,13 @@ fun DropScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Dock Hero with Ring
+            // Tactile Dock Hero with Arc & LED Strip
             val pct = (progress?.percentage ?: 0) / 100f
             DockHero(state = dropState, progressPct = pct)
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Status Headline & Mono Counters
+            // Status Headline & Live Telemetry Card
             when (dropState) {
                 is DropState.Dropping -> {
                     Text(
@@ -193,45 +275,38 @@ fun DropScreen(
                             contentDescription = "Backing up ${dropState.progress.currentFolder}, $pctBucket percent complete"
                         }
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${dropState.progress.copiedFiles} / ${dropState.progress.totalFiles} files · ${formatBytes(dropState.progress.copiedBytes)} / ${formatBytes(dropState.progress.totalBytes)}",
-                        style = DockMono.copy(fontSize = 14.sp),
-                        color = colors.textSecondary
-                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "about ${String.format("%.1f", dropState.progress.estMinutesRemaining)} min left",
-                        style = DockMono.copy(color = colors.dock, fontSize = 13.sp)
+                        text = "${dropState.progress.percentage}% completed · about ${String.format("%.1f", dropState.progress.estMinutesRemaining)} min remaining",
+                        style = DockMono.copy(color = colors.dock, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     )
                 }
 
                 is DropState.Verifying -> {
                     Text("Verifying ${dropState.currentFolder}", style = DockHeadline, color = colors.seal)
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${dropState.verifiedFiles} of ${dropState.totalFiles} files verified · re-read check",
-                        style = DockMono.copy(fontSize = 14.sp),
-                        color = colors.textSecondary
+                        style = DockMono.copy(fontSize = 13.sp, color = colors.seal, fontWeight = FontWeight.SemiBold)
                     )
                 }
 
                 is DropState.Paused -> {
-                    Text("Paused", style = DockHeadline, color = colors.attention)
+                    Text("Backup Paused", style = DockHeadline, color = colors.attention)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(dropState.reason.message, style = DockBodySmall, color = colors.textSecondary)
                 }
 
                 is DropState.Interrupted -> {
-                    Text("Backup interrupted", style = DockHeadline, color = colors.danger)
+                    Text("SSD Disconnected", style = DockHeadline, color = colors.danger)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("SSD was disconnected. Plug it back in to resume.", style = DockBodySmall, color = colors.textSecondary)
+                    Text("Plug your SSD back in to resume where it left off.", style = DockBodySmall, color = colors.textSecondary)
                 }
 
                 is DropState.Preflight -> {
-                    Text("Checking your SSD…", style = DockHeadline, color = colors.textPrimary)
+                    Text("Checking Storage & Permissions…", style = DockHeadline, color = colors.textPrimary)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Testing write access and preparing files", style = DockBodySmall, color = colors.textSecondary)
+                    Text("Running write verification test…", style = DockBodySmall, color = colors.textSecondary)
                 }
 
                 else -> {}
@@ -239,80 +314,143 @@ fun DropScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Folder Segments Row (Camera ✓ · Pictures ● · Documents)
+            // Folder Segments Carousel (Camera ✓ · Pictures ● · Documents)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 itemsIndexed(sourceFolders) { index, folder ->
                     val isDone = (progress?.folderIndex ?: 0) > index + 1
                     val isCurrent = (progress?.folderIndex ?: 0) == index + 1
 
+                    val chipBorderColor by animateColorAsState(
+                        targetValue = when {
+                            isDone -> colors.seal
+                            isCurrent -> colors.dock
+                            else -> colors.outline.copy(alpha = 0.5f)
+                        },
+                        label = "chipBorder"
+                    )
+
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isCurrent) colors.surfaceRaised else colors.surface)
-                            .border(
-                                1.dp,
-                                if (isDone) colors.seal else if (isCurrent) colors.dock else colors.outline,
-                                RoundedCornerShape(12.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                when {
+                                    isDone -> colors.seal.copy(alpha = 0.08f)
+                                    isCurrent -> colors.dock.copy(alpha = 0.08f)
+                                    else -> colors.surface
+                                }
                             )
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .border(if (isCurrent) 1.5.dp else 1.dp, chipBorderColor, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (isDone) {
-                                Text("✓ ", style = DockMono.copy(color = colors.seal, fontSize = 12.sp))
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = null,
+                                    tint = colors.seal,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
                             } else if (isCurrent) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(7.dp)
                                         .clip(CircleShape)
-                                        .background(colors.dock)
+                                        .background(colors.dock.copy(alpha = pulseAlpha))
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                             }
-                            Text(folder.label, style = DockBodySmall, color = colors.textPrimary)
+                            Text(
+                                text = folder.label,
+                                style = DockBodySmall.copy(
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isDone) colors.seal else if (isCurrent) colors.dock else colors.textPrimary
+                                )
+                            )
                         }
                     }
                 }
             }
 
-            // Expandable Technical Details Disclosure
+            // Expandable Telemetry Card
             AnimatedVisibility(visible = showDetails) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(RadiusMd))
-                        .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                        .clip(RoundedCornerShape(18.dp))
+                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                     colors = CardDefaults.cardColors(containerColor = colors.surface)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("CURRENT FILE", style = DockMono.copy(fontSize = 10.sp), color = colors.textTertiary)
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = progress?.currentFilePath?.ifEmpty { "Scanning…" } ?: "None",
+                            "LIVE STREAM METRICS",
+                            style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                            color = colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Throughput", style = DockBodySmall, color = colors.textSecondary)
+                                Text(
+                                    "${String.format("%.1f", progress?.speedMbS ?: 0.0)} MB/s",
+                                    style = DockMono.copy(fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                                )
+                            }
+                            Column {
+                                Text("Rate", style = DockBodySmall, color = colors.textSecondary)
+                                Text(
+                                    "${String.format("%.1f", progress?.filesPerSec ?: 0.0)} files/s",
+                                    style = DockMono.copy(fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                                )
+                            }
+                            Column {
+                                Text("Copied Files", style = DockBodySmall, color = colors.textSecondary)
+                                Text(
+                                    "${progress?.copiedFiles ?: 0} / ${progress?.totalFiles ?: 0}",
+                                    style = DockMono.copy(fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(colors.outline.copy(alpha = 0.35f))
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text("Current File:", style = DockBodySmall, color = colors.textTertiary)
+                        Text(
+                            text = progress?.currentFilePath?.ifEmpty { "Scanning directory…" } ?: "None",
                             style = DockMono.copy(fontSize = 11.sp),
                             color = colors.textPrimary,
                             maxLines = 1
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Speed: ${String.format("%.1f", progress?.speedMbS ?: 0.0)} MB/s", style = DockMono.copy(fontSize = 11.sp), color = colors.textSecondary)
-                            Text("Rate: ${String.format("%.1f", progress?.filesPerSec ?: 0.0)} files/s", style = DockMono.copy(fontSize = 11.sp), color = colors.textSecondary)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Verification: size + SHA-256 on copy + re-read", style = DockMono.copy(fontSize = 11.sp), color = colors.seal)
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
+    // Stop Confirmation Sheet
     if (showStopConfirmSheet) {
         ModalBottomSheet(
             onDismissRequest = { showStopConfirmSheet = false },
             containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = RadiusMd, topEnd = RadiusMd)
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -321,42 +459,61 @@ fun DropScreen(
                     .padding(bottom = 32.dp, top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.attention.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = colors.attention,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Stop backup?",
                     style = DockHeadline,
                     color = colors.textPrimary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Files copied so far are kept. You can resume later.",
+                    text = "Files copied so far are safely committed to your SSD. You can resume at any time.",
                     style = DockBodySmall,
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(onClick = { showStopConfirmSheet = false }) {
-                        Text("Keep going", style = DockBody.copy(color = colors.dock, fontWeight = FontWeight.SemiBold))
-                    }
-                    Button(
+                    OutlinedButton(
                         onClick = {
                             showStopConfirmSheet = false
                             onStopClick()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.danger)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("Stop", style = DockBody.copy(color = colors.textPrimary))
+                        Text("Stop Backup", style = DockBody.copy(color = colors.danger, fontWeight = FontWeight.SemiBold))
+                    }
+                    Button(
+                        onClick = { showStopConfirmSheet = false },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.dock)
+                    ) {
+                        Text("Keep Going", style = DockBody.copy(color = colors.onDock, fontWeight = FontWeight.Bold))
                     }
                 }
             }
         }
     }
-}
-
-private fun formatBytes(bytes: Long): String {
-    val gb = bytes.toDouble() / (1024 * 1024 * 1024)
-    return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
 }
