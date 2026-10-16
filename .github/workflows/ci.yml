@@ -1,0 +1,65 @@
+name: CI Pipeline & PR Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Build, Test & Zero-Network Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant Execute Permission to Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests & Built-in Verification (check)
+        run: ./gradlew check --stacktrace
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Assert Zero Network Permissions (Rule 3 Hard Gate)
+        run: |
+          echo "Auditing manifests for forbidden network permissions..."
+          BANNED_PERMS=("android.permission.INTERNET" "android.permission.ACCESS_NETWORK_STATE")
+          FOUND_VIOLATION=0
+
+          while IFS= read -r manifest; do
+            for perm in "${BANNED_PERMS[@]}"; do
+              if grep -Fq "$perm" "$manifest"; then
+                echo "::error file=$manifest::FORBIDDEN PERMISSION DETECTED: $perm is present in $manifest! DockDrop strictly bans network access per CLAUDE.md Rule 3."
+                FOUND_VIOLATION=1
+              fi
+            done
+          done < <(find . -name "AndroidManifest.xml" -not -path "*/build/intermediates/navigation-json/*")
+
+          if [ $FOUND_VIOLATION -ne 0 ]; then
+            echo "CI Gate Failed: One or more forbidden network permissions were discovered."
+            exit 1
+          fi
+
+          echo "Audit Passed: Zero network permissions confirmed across all manifests."

@@ -1,5 +1,11 @@
 # DockDrop
 
+[![CI Pipeline](https://github.com/i-soumya18/DockDrop/actions/workflows/ci.yml/badge.svg)](https://github.com/i-soumya18/DockDrop/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Zero Network Permissions](https://img.shields.io/badge/Network_Permissions-None_(100%25_Offline)-brightgreen.svg)](#core-guarantees--philosophy)
+[![Target SDK](https://img.shields.io/badge/Android_Target_SDK-35_(Android_15)-orange.svg)](app/build.gradle.kts)
+[![Min SDK](https://img.shields.io/badge/Min_SDK-26-yellow.svg)](app/build.gradle.kts)
+
 **Plug in SSD. Tap once. Walk away.**
 
 DockDrop is an offline-first Android backup tool designed for extreme trust, predictable throughput, and zero vendor lock-in. It turns any USB-C SSD into an automatic backup target for your phone's camera roll, downloads, and documents.
@@ -110,3 +116,21 @@ When using DockDrop, restore is a first-class operation:
    - **Overwrite:** Replaces phone copies only when explicitly selected by the user.
 4. **New-Phone Migration (S16):** Plug your SSD into a brand new phone on a fresh install. DockDrop automatically discovers existing backups on the drive and guides you through a 4-step wizard to map backup folders to new phone directories.
 5. **Pre-Rename Verification & Media Rescan:** Restored files are verified against the manifest SHA-256 *before* renaming into place, and registered with Android's MediaStore so your photo gallery and music players update instantly.
+
+---
+
+## Architecture & Development
+
+- **[Architecture Overview](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/ARCHITECTURE.md)**: System design, pipeline stages (Scan → Diff → Copy → Verify → Commit), and the 8 work domains.
+- **[Contributing Guide](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/CONTRIBUTING.md)**: Setting up your environment, code standards, conventional commits, and pre-flight PR checklist.
+- **[Code of Conduct](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/CODE_OF_CONDUCT.md)**: Community standards and enforcement guidelines (Contributor Covenant v2.1).
+- **[Security Policy](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/SECURITY.md)**: Zero-network attack surface details and private vulnerability disclosure procedures.
+- **[Support & Troubleshooting](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/SUPPORT.md)**: Hardware OTG tips, exFAT compatibility, and help channels.
+- **[Governance](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/GOVERNANCE.md)**: Project roles and Architecture Decision Records (ADR) process.
+- **[Standard Operating Procedures](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/docs/sop/)**: Release workflows, PR review checklists, and bug triage procedures.
+
+---
+
+## License
+
+DockDrop is open-source software licensed under the [Apache License 2.0](file:///c:/Users/sahoo/AndroidStudioProjects/DockDrop/LICENSE).
