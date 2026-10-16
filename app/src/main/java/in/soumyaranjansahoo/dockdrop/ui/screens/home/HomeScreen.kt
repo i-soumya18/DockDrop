@@ -54,6 +54,8 @@ fun HomeScreen(
     onNavigateToDrop: () -> Unit,
     onNavigateToReceipt: () -> Unit,
     onNavigateToRestore: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
     onOpenKeepAliveClick: () -> Unit = {},
     onSetClick: (SetDefinition) -> Unit = {},
     modifier: Modifier = Modifier
@@ -187,7 +189,7 @@ fun HomeScreen(
                         style = DockBody.copy(color = colors.textSecondary, fontWeight = FontWeight.Normal),
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onOpenKeepAliveClick() }
+                            .clickable { onNavigateToSettings() }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -277,13 +279,27 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = "Backup Sets", style = DockBody.copy(fontWeight = FontWeight.SemiBold), color = colors.textSecondary)
-                    if (sets.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
-                            text = "+ New Set",
+                            text = "History",
                             style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = colors.dock,
-                            modifier = Modifier.clickable { onCreateSetClick() }
+                            color = colors.textSecondary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { onNavigateToHistory() }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         )
+                        if (sets.isNotEmpty()) {
+                            Text(
+                                text = "+ New Set",
+                                style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
+                                color = colors.dock,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { onCreateSetClick() }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))

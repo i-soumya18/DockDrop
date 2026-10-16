@@ -35,6 +35,10 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
+
 @Composable
 fun DockHero(
     state: DropState,
@@ -42,10 +46,11 @@ fun DockHero(
     progressPct: Float = 0f
 ) {
     val colors = DockTheme.colors
+    val isReducedMotion = LocalReducedMotion.current
 
-    // Breathe transition for absent/waiting state
+    // Breathe transition for absent/waiting state (disabled if reduced motion)
     val infiniteTransition = rememberInfiniteTransition(label = "DockBreathe")
-    val breatheAlpha by infiniteTransition.animateFloat(
+    val animatedBreatheAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
         targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
@@ -54,9 +59,10 @@ fun DockHero(
         ),
         label = "breatheAlpha"
     )
+    val breatheAlpha = if (isReducedMotion) 0.75f else animatedBreatheAlpha
 
-    // Sweep scan line for verifying state
-    val scanAngle by infiniteTransition.animateFloat(
+    // Sweep scan line for verifying state (disabled if reduced motion)
+    val animatedScanAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
@@ -65,13 +71,18 @@ fun DockHero(
         ),
         label = "scanAngle"
     )
+    val scanAngle = if (isReducedMotion) 0f else animatedScanAngle
 
     // Checkmark draw trim for sealed state
-    val checkmarkTrim = remember { Animatable(0f) }
-    LaunchedEffect(state) {
+    val checkmarkTrim = remember { Animatable(if (state is DropState.Sealed && isReducedMotion) 1f else 0f) }
+    LaunchedEffect(state, isReducedMotion) {
         if (state is DropState.Sealed) {
-            checkmarkTrim.snapTo(0f)
-            checkmarkTrim.animateTo(1f, animationSpec = tween(380, easing = FastOutSlowInEasing))
+            if (isReducedMotion) {
+                checkmarkTrim.snapTo(1f)
+            } else {
+                checkmarkTrim.snapTo(0f)
+                checkmarkTrim.animateTo(1f, animationSpec = tween(380, easing = FastOutSlowInEasing))
+            }
         } else {
             checkmarkTrim.snapTo(0f)
         }
@@ -79,17 +90,38 @@ fun DockHero(
 
     // Shake offset for Attention state
     val shakeOffset = remember { Animatable(0f) }
-    LaunchedEffect(state) {
-        if (state is DropState.Attention) {
+    LaunchedEffect(state, isReducedMotion) {
+        if (state is DropState.Attention && !isReducedMotion) {
             shakeOffset.animateTo(6f, animationSpec = tween(60))
             shakeOffset.animateTo(-6f, animationSpec = tween(60))
             shakeOffset.animateTo(4f, animationSpec = tween(60))
             shakeOffset.animateTo(0f, animationSpec = tween(60))
+        } else {
+            shakeOffset.snapTo(0f)
         }
     }
 
+    val a11yStateDescription = when (state) {
+        is DropState.NoDock -> "No SSD connected. Plug in a USB-C drive to begin."
+        is DropState.DockDetected -> "${state.dock.userLabel} connected"
+        is DropState.AwaitingConfirm -> "Ready to back up to ${state.dock.userLabel}"
+        is DropState.Preflight -> "Checking SSD write access"
+        is DropState.Dropping -> "Backing up ${state.progress.currentFolder}, ${state.progress.percentage}% complete"
+        is DropState.Verifying -> "Verifying files in ${state.currentFolder}"
+        is DropState.Sealed -> "Backup sealed and 100% verified"
+        is DropState.Partial -> "Backup completed with skipped files"
+        is DropState.Paused -> "Backup paused: ${state.reason.message}"
+        is DropState.Interrupted -> "Backup interrupted: SSD disconnected"
+        is DropState.Resumable -> "Backup resumable at ${state.progress.percentage}%"
+        is DropState.Attention -> "Attention needed: ${state.reason.title}"
+    }
+
     Box(
-        modifier = modifier.size(220.dp),
+        modifier = modifier
+            .size(220.dp)
+            .semantics(mergeDescendants = true) {
+                stateDescription = a11yStateDescription
+            },
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

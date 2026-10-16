@@ -94,6 +94,7 @@ fun SetWizardScreen(
     currentDock: DockInfo?,
     storageGateway: StorageGateway,
     encryptedSetManager: EncryptedSetManager? = null,
+    defaultMinBatteryPct: Int = 20,
     onWizardFinished: (SetDefinition, List<SourceFolder>) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
@@ -129,7 +130,7 @@ fun SetWizardScreen(
     var showEncryptionSetup by remember { mutableStateOf(false) }
     var provisionedEncryption by remember { mutableStateOf<ProvisionedEncryption?>(null) }
 
-    var minBatteryPct by remember { mutableIntStateOf(20) }
+    var minBatteryPct by remember { mutableIntStateOf(defaultMinBatteryPct) }
 
     // Step 4 State: Review & Name
     var setName by remember { mutableStateOf("My Phone") }

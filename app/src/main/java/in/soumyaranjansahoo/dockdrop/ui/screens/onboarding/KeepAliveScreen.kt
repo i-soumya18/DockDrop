@@ -11,6 +11,10 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -134,6 +138,7 @@ fun KeepAliveScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -212,6 +217,9 @@ private fun StepCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                stateDescription = if (isDone) "Completed" else "Action required"
+            }
             .clip(RoundedCornerShape(RadiusMd))
             .background(colors.surface)
             .border(
@@ -283,6 +291,9 @@ private fun SamsungStepCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                stateDescription = if (isConfirmed) "Confirmed" else "Confirmation needed"
+            }
             .clip(RoundedCornerShape(RadiusMd))
             .background(colors.surface)
             .border(

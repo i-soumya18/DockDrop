@@ -42,7 +42,7 @@ data class Particle(
 @Composable
 fun DropParticles(
     filesPerSec: Double,
-    isReducedMotion: Boolean = false,
+    isReducedMotion: Boolean = `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion.current,
     currentFileName: String = "",
     reverseDirection: Boolean = false,
     modifier: Modifier = Modifier

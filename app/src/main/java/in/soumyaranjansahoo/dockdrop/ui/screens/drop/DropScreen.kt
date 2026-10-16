@@ -55,6 +55,13 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropScreen(
@@ -148,11 +155,13 @@ fun DropScreen(
             }
         }
     ) { innerPadding ->
+        val pctBucket = ((progress?.percentage ?: 0) / 10) * 10
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -175,7 +184,15 @@ fun DropScreen(
             // Status Headline & Mono Counters
             when (dropState) {
                 is DropState.Dropping -> {
-                    Text("Backing up ${dropState.progress.currentFolder}", style = DockHeadline, color = colors.textPrimary)
+                    Text(
+                        text = "Backing up ${dropState.progress.currentFolder}",
+                        style = DockHeadline,
+                        color = colors.textPrimary,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            contentDescription = "Backing up ${dropState.progress.currentFolder}, $pctBucket percent complete"
+                        }
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "${dropState.progress.copiedFiles} / ${dropState.progress.totalFiles} files · ${formatBytes(dropState.progress.copiedBytes)} / ${formatBytes(dropState.progress.totalBytes)}",

@@ -36,10 +36,15 @@ import `in`.soumyaranjansahoo.dockdrop.ui.screens.restore.RestoreBrowserScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.restore.RestoreHubScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.restore.RestorePreviewScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.restore.RestoreProgressScreen
+import `in`.soumyaranjansahoo.dockdrop.core.model.Receipt
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.history.HistoryScreen
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.onboarding.WelcomeScreen
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.settings.SettingsScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.wizard.SetWizardScreen
 import kotlinx.coroutines.launch
 
 object Routes {
+    const val WELCOME = "welcome"
     const val HOME = "home"
     const val WIZARD = "wizard"
     const val DROP = "drop"
@@ -51,6 +56,8 @@ object Routes {
     const val RESTORE_PREVIEW = "restore_preview"
     const val RESTORE_PROGRESS = "restore_progress"
     const val NEW_PHONE_RESTORE = "new_phone_restore"
+    const val SETTINGS = "settings"
+    const val HISTORY = "history"
 }
 
 @Composable
@@ -89,6 +96,9 @@ fun AppNavGraph(
     var targetNewPhoneBackup by remember { mutableStateOf<DiscoveredBackupSet?>(null) }
     var discoveredBackups by remember { mutableStateOf<List<DiscoveredBackupSet>>(emptyList()) }
     var unlockingBackup by remember { mutableStateOf<DiscoveredBackupSet?>(null) }
+    var viewedReceipt by remember { mutableStateOf<Receipt?>(null) }
+
+    val hasCompletedOnboarding by container.appPreferences.hasCompletedOnboarding.collectAsState()
 
     // If activeSet is not selected, default to the first set
     LaunchedEffect(sets) {
@@ -118,6 +128,7 @@ fun AppNavGraph(
     LaunchedEffect(dropState) {
         when (dropState) {
             is DropState.Sealed, is DropState.Partial -> {
+                viewedReceipt = null
                 navController.navigate(Routes.RECEIPT) {
                     launchSingleTop = true
                 }
@@ -131,9 +142,20 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Routes.HOME,
+        startDestination = if (hasCompletedOnboarding) Routes.HOME else Routes.WELCOME,
         modifier = modifier
     ) {
+        composable(Routes.WELCOME) {
+            WelcomeScreen(
+                onFinishOnboarding = {
+                    container.appPreferences.setCompletedOnboarding(true)
+                    navController.navigate(Routes.KEEP_ALIVE) {
+                        popUpTo(Routes.WELCOME) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Routes.HOME) {
             HomeScreen(
                 dropState = dropState,
@@ -145,8 +167,13 @@ fun AppNavGraph(
                     navController.navigate(Routes.DROP)
                 },
                 onNavigateToDrop = { navController.navigate(Routes.DROP) },
-                onNavigateToReceipt = { navController.navigate(Routes.RECEIPT) },
+                onNavigateToReceipt = {
+                    viewedReceipt = null
+                    navController.navigate(Routes.RECEIPT)
+                },
                 onNavigateToRestore = { navController.navigate(Routes.RESTORE_HUB) },
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
                 onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) },
                 onSetClick = { set ->
                     activeSet = set
@@ -156,9 +183,12 @@ fun AppNavGraph(
         }
 
         composable(Routes.WIZARD) {
+            val defaultBatteryPct by container.appPreferences.defaultMinBatteryPct.collectAsState()
             SetWizardScreen(
                 currentDock = currentDock,
                 storageGateway = storageGateway,
+                encryptedSetManager = container.encryptedSetManager,
+                defaultMinBatteryPct = defaultBatteryPct,
                 onWizardFinished = { newSet, folders ->
                     scope.launch {
                         setRepository.saveSet(newSet, folders)
@@ -199,13 +229,37 @@ fun AppNavGraph(
                     onNavigateToDrop = {},
                     onNavigateToReceipt = {},
                     onNavigateToRestore = { navController.navigate(Routes.RESTORE_HUB) },
+                    onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                    onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
                     onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
                 )
             }
         }
 
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                appPreferences = container.appPreferences,
+                setRepository = setRepository,
+                sets = sets,
+                onBackClick = { navController.popBackStack() },
+                onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
+                onNavigateToKeepAlive = { navController.navigate(Routes.KEEP_ALIVE) }
+            )
+        }
+
+        composable(Routes.HISTORY) {
+            HistoryScreen(
+                setRepository = setRepository,
+                onReceiptClick = { r ->
+                    viewedReceipt = r
+                    navController.navigate(Routes.RECEIPT)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
         composable(Routes.RECEIPT) {
-            val receipt = when (dropState) {
+            val receipt = viewedReceipt ?: when (dropState) {
                 is DropState.Sealed -> (dropState as DropState.Sealed).receipt
                 is DropState.Partial -> (dropState as DropState.Partial).receipt
                 else -> null
@@ -215,11 +269,11 @@ fun AppNavGraph(
                 ReceiptScreen(
                     receipt = receipt,
                     onDone = {
-                        navController.navigate(Routes.HOME) {
-                            popUpTo(Routes.HOME) { inclusive = true }
-                        }
+                        viewedReceipt = null
+                        navController.popBackStack()
                     },
                     onTestRestoreClick = {
+                        viewedReceipt = null
                         navController.navigate(Routes.RESTORE_HUB)
                     }
                 )
@@ -232,6 +286,8 @@ fun AppNavGraph(
                     onNavigateToDrop = {},
                     onNavigateToReceipt = {},
                     onNavigateToRestore = { navController.navigate(Routes.RESTORE_HUB) },
+                    onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                    onNavigateToHistory = { navController.navigate(Routes.HISTORY) },
                     onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
                 )
             }

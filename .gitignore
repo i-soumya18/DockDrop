@@ -61,3 +61,7 @@ Thumbs.db
 
 # IDE & AI tooling local caches
 .gemini/
+
+# Play Store listing
+STORE_LISTING.md
+store_listing.md

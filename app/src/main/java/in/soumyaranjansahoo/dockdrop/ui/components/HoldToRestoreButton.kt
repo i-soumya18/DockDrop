@@ -47,11 +47,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
+
 @Composable
 fun HoldToRestoreButton(
     text: String = "Hold to restore everything",
     enabled: Boolean = true,
-    isReducedMotion: Boolean = false,
+    isReducedMotion: Boolean = LocalReducedMotion.current,
     haptics: HapticFeedbackController? = null,
     onHoldComplete: () -> Unit,
     modifier: Modifier = Modifier
@@ -113,6 +117,14 @@ fun HoldToRestoreButton(
             .clip(RoundedCornerShape(20.dp))
             .background(if (enabled) colors.surfaceRaised else colors.surface)
             .border(1.dp, if (enabled) colors.outline else colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .semantics {
+                if (enabled) {
+                    onClick(label = "Restore") {
+                        showA11yConfirmDialog = true
+                        true
+                    }
+                }
+            }
             .pointerInput(enabled, isTouchExploration) {
                 if (!enabled) return@pointerInput
 

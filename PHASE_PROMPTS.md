@@ -12,7 +12,7 @@
 | 2 | Auto trigger & foreground service | **COMPLETE** (completed 2026-10-16) | — (Phase 2 deliverables verified) | A2, A3, A7, A8 |
 | 3 | Restore | **COMPLETE** (completed 2026-10-16) | — (Phase 3 deliverables verified) | A5, A4, A7, A8 |
 | 4 | Policies & encryption | **COMPLETE** (completed 2026-10-16) | — (format spec, deletion policies & crypto tests verified) | A4, A6, A7, A8 |
-| 5 | Play readiness & polish | **READY** (unblocked 2026-10-16) | Unblocked (Phase 4 complete) | A7, A8 |
+| 5 | Play readiness & polish | **COMPLETE** (completed 2026-10-16) | — (Store listing, Data Safety, accessibility & release builds verified) | A7, A8 |
 
 ---
 
@@ -243,11 +243,12 @@ Complete the deletion policies and add encryption without changing the plain-mir
 ---
 
 <details>
-<summary><strong>PHASE 5 — Play readiness & polish (READY)</strong></summary>
+<summary><strong>PHASE 5 — Play readiness & polish (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 4 complete).
+- **Status:** Complete (completed 2026-10-16) · **Blocked on:** None.
 - **Goal:** pass closed testing and satisfy Play requirements; finish motion polish and accessibility.
+- **Deliverables completed:** Onboarding polish (S01, S02), Settings (S20), History (S21), `docs/play/STORE_LISTING.md`, `docs/play/PRIVACY_POLICY.md`, `docs/play/DATA_SAFETY_AND_DECLARATIONS.md`, `docs/play/RELEASE_CHECKLIST_AND_CLOSED_TEST_REPORT.md`, zero-network CI rule verified, 49 unit tests and release builds verified.
 
 ### Prompt
 Make DockDrop shippable and honest on the store.

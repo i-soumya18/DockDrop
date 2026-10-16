@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import `in`.soumyaranjansahoo.dockdrop.core.preferences.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkDock,
@@ -33,9 +34,16 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun DockDropTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.DARK,
+    reduceMotionPref: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+    }
+
     val dockColors = if (darkTheme) {
         DockColors(
             bg = DarkBg,
@@ -69,8 +77,12 @@ fun DockDropTheme(
     }
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val isReducedMotion = reduceMotionPref || isSystemReducedMotion()
 
-    CompositionLocalProvider(LocalDockColors provides dockColors) {
+    CompositionLocalProvider(
+        LocalDockColors provides dockColors,
+        LocalReducedMotion provides isReducedMotion
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

@@ -5,6 +5,12 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -134,11 +140,13 @@ fun RestoreProgressScreen(
             }
         } else {
             // Live Restore Progress View (Mirror of S09 with reverse particles)
+            val pctBucket = ((progress?.percentage ?: 0) / 10) * 10
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -182,7 +190,15 @@ fun RestoreProgressScreen(
                         color = colors.textSecondary
                     )
                 } else if (progress != null) {
-                    Text("Restoring ${progress.currentFolder}", style = DockHeadline, color = colors.textPrimary)
+                    Text(
+                        text = "Restoring ${progress.currentFolder}",
+                        style = DockHeadline,
+                        color = colors.textPrimary,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            contentDescription = "Restoring ${progress.currentFolder}, $pctBucket percent complete"
+                        }
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "${progress.restoredFiles} / ${progress.totalFiles} files · ${formatBytes(progress.restoredBytes)} / ${formatBytes(progress.totalBytes)}",

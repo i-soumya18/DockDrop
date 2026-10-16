@@ -20,6 +20,10 @@ class AppContainer(val context: Context) {
         SafStorageGateway(context)
     }
 
+    val appPreferences: `in`.soumyaranjansahoo.dockdrop.core.preferences.AppPreferences by lazy {
+        `in`.soumyaranjansahoo.dockdrop.core.preferences.AppPreferences(context)
+    }
+
     val database: DropDatabase by lazy {
         DropDatabase.build(context)
     }

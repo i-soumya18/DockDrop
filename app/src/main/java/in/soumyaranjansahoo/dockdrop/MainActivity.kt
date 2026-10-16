@@ -47,7 +47,13 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
 
         setContent {
-            DockDropTheme {
+            val themeMode by container.appPreferences.themeMode.collectAsState()
+            val reduceMotionPref by container.appPreferences.reduceMotion.collectAsState()
+
+            DockDropTheme(
+                themeMode = themeMode,
+                reduceMotionPref = reduceMotionPref
+            ) {
                 val currentDock by container.dockMonitor.currentDock.collectAsState()
                 val isUsbConnecting by container.dockMonitor.isUsbConnecting.collectAsState()
                 val dropState by container.engine.state.collectAsState()

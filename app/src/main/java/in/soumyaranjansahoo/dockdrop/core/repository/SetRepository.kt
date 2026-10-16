@@ -18,9 +18,10 @@ open class SetRepository(
 ) {
     constructor(database: DropDatabase) : this(database.setDao(), database.receiptDao())
 
-    open val allSets: Flow<List<SetDefinition>> = setDao.getAllSets().map { list ->
-        list.map { it.toDomain() }
-    }
+    open val allSets: Flow<List<SetDefinition>>
+        get() = setDao.getAllSets().map { list ->
+            list.map { it.toDomain() }
+        }
 
     fun getSourceFolders(setId: String): Flow<List<SourceFolder>> =
         setDao.getSourceFoldersForSet(setId).map { list -> list.map { it.toDomain() } }
@@ -63,12 +64,23 @@ open class SetRepository(
         setDao.deleteSourceFoldersForSet(id)
     }
 
+    suspend fun deleteAllSets() {
+        setDao.deleteAllSets()
+        setDao.deleteAllSourceFolders()
+    }
+
     suspend fun saveReceipt(receipt: Receipt) {
         receiptDao.insertReceipt(ReceiptEntity.fromDomain(receipt))
     }
 
+    val allReceipts: Flow<List<Receipt>>
+        get() = receiptDao.getAllReceipts().map { list -> list.map { it.toDomain() } }
+
     fun getReceipts(setId: String): Flow<List<Receipt>> =
         receiptDao.getReceiptsForSet(setId).map { list -> list.map { it.toDomain() } }
+
+    suspend fun getRecentReceiptsSync(limit: Int): List<Receipt> =
+        receiptDao.getRecentReceiptsSync(limit).map { it.toDomain() }
 
     suspend fun getLatestReceipt(setId: String): Receipt? =
         receiptDao.getLatestReceipt(setId)?.toDomain()

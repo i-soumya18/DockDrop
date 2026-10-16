@@ -35,6 +35,12 @@ interface SetDao {
 
     @Query("DELETE FROM source_folders WHERE setId = :setId")
     suspend fun deleteSourceFoldersForSet(setId: String): Int
+
+    @Query("DELETE FROM sets")
+    suspend fun deleteAllSets(): Int
+
+    @Query("DELETE FROM source_folders")
+    suspend fun deleteAllSourceFolders(): Int
 }
 
 @Dao
@@ -79,6 +85,12 @@ suspend fun JournalDao.updateStatus(
 interface ReceiptDao {
     @Query("SELECT * FROM receipts WHERE setId = :setId ORDER BY timestampMs DESC")
     fun getReceiptsForSet(setId: String): Flow<List<ReceiptEntity>>
+
+    @Query("SELECT * FROM receipts ORDER BY timestampMs DESC")
+    fun getAllReceipts(): Flow<List<ReceiptEntity>>
+
+    @Query("SELECT * FROM receipts ORDER BY timestampMs DESC LIMIT :limit")
+    suspend fun getRecentReceiptsSync(limit: Int): List<ReceiptEntity>
 
     @Query("SELECT * FROM receipts WHERE setId = :setId ORDER BY timestampMs DESC LIMIT 1")
     suspend fun getLatestReceipt(setId: String): ReceiptEntity?
