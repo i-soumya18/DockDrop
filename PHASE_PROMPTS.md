@@ -11,8 +11,8 @@
 | 1 | Manual backup MVP | **COMPLETE** (completed 2026-10-16) | — (commit `72e5eb1`) | A1, A3, A4, A7, A8 |
 | 2 | Auto trigger & foreground service | **COMPLETE** (completed 2026-10-16) | — (Phase 2 deliverables verified) | A2, A3, A7, A8 |
 | 3 | Restore | **COMPLETE** (completed 2026-10-16) | — (Phase 3 deliverables verified) | A5, A4, A7, A8 |
-| 4 | Policies & encryption | **READY** (unblocked 2026-10-16) | Unblocked (Phase 3 complete; restore engine & drills verified) | A4, A6, A7, A8 |
-| 5 | Play readiness & polish | Not started | Phase 4 complete | A7, A8 |
+| 4 | Policies & encryption | **COMPLETE** (completed 2026-10-16) | — (format spec, deletion policies & crypto tests verified) | A4, A6, A7, A8 |
+| 5 | Play readiness & polish | **READY** (unblocked 2026-10-16) | Unblocked (Phase 4 complete) | A7, A8 |
 
 ---
 
@@ -211,11 +211,13 @@ Build restore as a first-class feature, reusing the Drop screen components in re
 ---
 
 <details>
-<summary><strong>PHASE 4 — Policies & encryption (READY)</strong></summary>
+<summary><strong>PHASE 4 — Policies & encryption (COMPLETE)</strong></summary>
 
 ### Current Status
-- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 3 complete; restore engine & drills verified).
+- **Status:** Complete (completed 2026-10-16) · **Blocked on:** None (all criteria verified).
 - **Goal:** "Keep N days" and "Mirror exactly" with the mass-delete guard; optional per-Set encryption with recovery key.
+- **Blockers:** none.
+- **Deliverables completed:** Format specification (`docs/format-encrypted-v1.md`), ADR-005 (`docs/adr/ADR-005-flag-secure-recovery-key.md`), Pure Kotlin scrypt & HKDF/HMAC (`core/crypto/ScryptKdf.kt`, `core/crypto/HkdfAndHmac.kt`), Crockford Base32 Recovery Key (`core/crypto/RecoveryKeyCodec.kt`), DDC1 chunked streaming codec (`core/crypto/Ddc1Streams.kt`, `core/crypto/SetStreamCodec.kt`), Encrypted Set Manager (`core/crypto/EncryptedSetManager.kt`), Deletion & Retention Planner (`core/policy/DeletionPolicyPlanner.kt`), UI Screens (S18 `EncryptionSetupScreen`, S19 `UnlockSheet`, S17 `SetDetailScreen`, updated S07/S08/S11/S12/S16), 45 unit tests passing, CI task `verifyZeroNetworkPermissions`.
 
 ### Prompt
 Complete the deletion policies and add encryption without changing the plain-mirror default.
@@ -241,10 +243,10 @@ Complete the deletion policies and add encryption without changing the plain-mir
 ---
 
 <details>
-<summary><strong>PHASE 5 — Play readiness & polish (Not started)</strong></summary>
+<summary><strong>PHASE 5 — Play readiness & polish (READY)</strong></summary>
 
 ### Current Status
-- **Status:** Not started · **Blocked on:** Phase 4 complete.
+- **Status:** Ready (unblocked 2026-10-16) · **Blocked on:** Unblocked (Phase 4 complete).
 - **Goal:** pass closed testing and satisfy Play requirements; finish motion polish and accessibility.
 
 ### Prompt

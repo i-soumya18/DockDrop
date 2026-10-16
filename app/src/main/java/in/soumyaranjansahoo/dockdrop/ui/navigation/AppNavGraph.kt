@@ -24,6 +24,8 @@ import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlan
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.attention.AttentionSheet
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.crypto.UnlockSheet
+import `in`.soumyaranjansahoo.dockdrop.ui.screens.detail.SetDetailScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.drop.DropScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.home.HomeScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.onboarding.KeepAliveScreen
@@ -43,6 +45,7 @@ object Routes {
     const val DROP = "drop"
     const val RECEIPT = "receipt"
     const val KEEP_ALIVE = "keep_alive"
+    const val SET_DETAIL = "set_detail"
     const val RESTORE_HUB = "restore_hub"
     const val RESTORE_BROWSER = "restore_browser"
     const val RESTORE_PREVIEW = "restore_preview"
@@ -85,6 +88,7 @@ fun AppNavGraph(
     var browseEntries by remember { mutableStateOf<List<ManifestEntry>>(emptyList()) }
     var targetNewPhoneBackup by remember { mutableStateOf<DiscoveredBackupSet?>(null) }
     var discoveredBackups by remember { mutableStateOf<List<DiscoveredBackupSet>>(emptyList()) }
+    var unlockingBackup by remember { mutableStateOf<DiscoveredBackupSet?>(null) }
 
     // If activeSet is not selected, default to the first set
     LaunchedEffect(sets) {
@@ -143,7 +147,11 @@ fun AppNavGraph(
                 onNavigateToDrop = { navController.navigate(Routes.DROP) },
                 onNavigateToReceipt = { navController.navigate(Routes.RECEIPT) },
                 onNavigateToRestore = { navController.navigate(Routes.RESTORE_HUB) },
-                onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) }
+                onOpenKeepAliveClick = { navController.navigate(Routes.KEEP_ALIVE) },
+                onSetClick = { set ->
+                    activeSet = set
+                    navController.navigate(Routes.SET_DETAIL)
+                }
             )
         }
 
@@ -236,6 +244,29 @@ fun AppNavGraph(
             )
         }
 
+        composable(Routes.SET_DETAIL) {
+            val set = activeSet ?: sets.firstOrNull()
+            if (set != null) {
+                SetDetailScreen(
+                    set = set,
+                    setRepository = setRepository,
+                    onBack = { navController.popBackStack() },
+                    onBackUpNow = {
+                        onStartDropInService(set.id)
+                        navController.navigate(Routes.DROP)
+                    },
+                    onDeleteConfirmed = {
+                        activeSet = null
+                        navController.popBackStack()
+                    }
+                )
+            } else {
+                LaunchedEffect(Unit) {
+                    navController.popBackStack()
+                }
+            }
+        }
+
         composable(Routes.RESTORE_HUB) {
             RestoreHubScreen(
                 currentDock = currentDock,
@@ -268,6 +299,10 @@ fun AppNavGraph(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.KEEP_ALIVE)
+                },
+                encryptedSetManager = container.encryptedSetManager,
+                onPromptUnlock = { backup ->
+                    unlockingBackup = backup
                 }
             )
         }
@@ -367,7 +402,11 @@ fun AppNavGraph(
                             popUpTo(Routes.HOME) { inclusive = false }
                         }
                     },
-                    onCancel = { navController.popBackStack() }
+                    onCancel = { navController.popBackStack() },
+                    encryptedSetManager = container.encryptedSetManager,
+                    onPromptUnlock = { b ->
+                        unlockingBackup = b
+                    }
                 )
             } else {
                 LaunchedEffect(Unit) {
@@ -412,12 +451,37 @@ fun AppNavGraph(
             onPrimaryAction = {
                 activeAttentionReason = null
                 when (reason) {
+                    is AttentionReason.MassDelete -> {
+                        engine.confirmMassDeleteAndResume()
+                    }
                     is AttentionReason.NoSpace -> navController.navigate(Routes.WIZARD)
                     is AttentionReason.PermissionLost -> navController.navigate(Routes.WIZARD)
                     else -> {}
                 }
             },
+            onSecondaryAction = {
+                activeAttentionReason = null
+                if (reason is AttentionReason.MassDelete) {
+                    engine.switchToKeepAndResume()
+                }
+            },
             onDismiss = { activeAttentionReason = null }
         )
+    }
+
+    // Modal Unlock Bottom Sheet (SCREENS.md S19)
+    unlockingBackup?.let { backup ->
+        val vaultUri = currentVaultUri
+        if (vaultUri != null) {
+            UnlockSheet(
+                vaultTreeUri = vaultUri,
+                setId = backup.setId,
+                encryptedSetManager = container.encryptedSetManager,
+                onUnlockSuccess = {
+                    unlockingBackup = null
+                },
+                onDismiss = { unlockingBackup = null }
+            )
+        }
     }
 }

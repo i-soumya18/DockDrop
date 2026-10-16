@@ -10,6 +10,8 @@ data class SetDefinition(
     val retentionDays: Int = 30,
     val minBatteryPct: Int = 20,
     val isEncrypted: Boolean = false,
+    val mirrorConfirmed: Boolean = false,
+    val keystoreWrappedMkHex: String? = null,
     val verificationLevel: VerificationLevel = VerificationLevel.FULL_REREAD,
     val createdAtMs: Long = System.currentTimeMillis(),
     val lastSealedMs: Long? = null,

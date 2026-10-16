@@ -29,6 +29,7 @@ data class DropProgress(
 enum class PauseReason(val message: String) {
     USER_REQUESTED("You paused the backup"),
     BATTERY_LOW("Battery dropped below threshold"),
+    CHARGING_REQUIRED("Waiting for phone to be charging"),
     THERMAL_THROTTLE("Device is cooling down"),
     SYSTEM_TIMEOUT("Paused by system time limit — tap Resume to continue")
 }
@@ -40,8 +41,8 @@ sealed class AttentionReason(val title: String, val message: String) {
     data class PermissionLost(val folderLabel: String, val folderUri: String) :
         AttentionReason("Access lost to $folderLabel", "Grant access again to continue.")
 
-    data class MassDelete(val count: Int) :
-        AttentionReason("Mirror mode guard triggered", "Would remove $count files from the SSD.")
+    data class MassDelete(val count: Int, val paths: List<String> = emptyList()) :
+        AttentionReason("Mirror mode wants to remove $count files", "Nothing has been removed.")
 
     data class ReadErrors(val count: Int) :
         AttentionReason("Read errors encountered", "$count files could not be read.")

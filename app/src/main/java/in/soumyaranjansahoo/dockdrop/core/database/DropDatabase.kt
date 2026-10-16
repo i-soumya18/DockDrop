@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         JournalEntry::class,
         ReceiptEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class DropDatabase : RoomDatabase() {

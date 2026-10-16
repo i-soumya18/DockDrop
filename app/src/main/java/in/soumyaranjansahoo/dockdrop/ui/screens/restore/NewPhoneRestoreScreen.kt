@@ -74,6 +74,8 @@ fun NewPhoneRestoreScreen(
     setRepository: SetRepository,
     onExecutePlan: (RestorePlan) -> Unit,
     onCancel: () -> Unit,
+    encryptedSetManager: `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager? = null,
+    onPromptUnlock: (DiscoveredBackupSet) -> Unit = {},
     haptics: HapticFeedbackController? = null,
     modifier: Modifier = Modifier
 ) {
@@ -221,12 +223,21 @@ fun NewPhoneRestoreScreen(
                         Spacer(modifier = Modifier.height(32.dp))
 
                         Button(
-                            onClick = { step = 2 },
+                            onClick = {
+                                if (backup.isEncrypted && encryptedSetManager?.isSetUnlocked(backup.setId) != true) {
+                                    onPromptUnlock(backup)
+                                } else {
+                                    step = 2
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
                         ) {
-                            Text("Restore from this backup", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                if (backup.isEncrypted && encryptedSetManager?.isSetUnlocked(backup.setId) != true) "Unlock to restore" else "Restore from this backup",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold)
+                            )
                         }
                     }
                 }
@@ -302,7 +313,8 @@ fun NewPhoneRestoreScreen(
                                         name = backup.setName,
                                         dockVolumeUuid = backup.driveId,
                                         dockUserLabel = "SSD",
-                                        destinationVaultUriString = vaultTreeUri.toString()
+                                        destinationVaultUriString = vaultTreeUri.toString(),
+                                        isEncrypted = backup.isEncrypted
                                     )
                                     val newFolders = folderMappings.map { (fLabel, uriStr) ->
                                         SourceFolder(

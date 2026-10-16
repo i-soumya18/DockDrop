@@ -73,6 +73,8 @@ fun RestoreHubScreen(
     onNavigateToNewPhone: (DiscoveredBackupSet) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    encryptedSetManager: `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager? = null,
+    onPromptUnlock: (DiscoveredBackupSet) -> Unit = {},
     haptics: HapticFeedbackController? = null,
     modifier: Modifier = Modifier
 ) {
@@ -252,8 +254,21 @@ fun RestoreHubScreen(
                 item {
                     val plan = defaultPlan
                     val hasGaps = plan != null && plan.permissionGaps.isNotEmpty()
+                    val isLockedEncrypted = primaryBackup != null && primaryBackup.isEncrypted &&
+                            (encryptedSetManager?.isSetUnlocked(primaryBackup.setId) != true)
 
-                    if (hasGaps) {
+                    if (isLockedEncrypted) {
+                        Button(
+                            onClick = {
+                                onPromptUnlock(primaryBackup!!)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                        ) {
+                            Text("Unlock to restore", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                        }
+                    } else if (hasGaps) {
                         Button(
                             onClick = {
                                 if (primaryBackup != null) onNavigateToNewPhone(primaryBackup)

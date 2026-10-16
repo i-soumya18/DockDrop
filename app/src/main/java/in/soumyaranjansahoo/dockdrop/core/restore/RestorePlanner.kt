@@ -1,6 +1,9 @@
 package `in`.soumyaranjansahoo.dockdrop.core.restore
 
 import android.net.Uri
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.PlainSetStreamCodec
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.SetStreamCodec
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.ManifestEntry
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.ManifestRepository
 import `in`.soumyaranjansahoo.dockdrop.core.storage.StorageGateway
@@ -11,7 +14,8 @@ import java.util.UUID
 
 class RestorePlanner(
     private val storageGateway: StorageGateway,
-    private val manifestRepository: ManifestRepository
+    private val manifestRepository: ManifestRepository,
+    private val encryptedSetManager: EncryptedSetManager? = null
 ) {
 
     suspend fun createPlan(
@@ -24,14 +28,28 @@ class RestorePlanner(
         conflictPolicy: ConflictPolicy = ConflictPolicy.KEEP_BOTH,
         isDrill: Boolean = false
     ): RestorePlan = withContext(Dispatchers.IO) {
+        val meta = manifestRepository.readSetMetadata(vaultTreeUri, setId)
+        val encMeta = encryptedSetManager?.readEncryptionMetadata(vaultTreeUri, setId)
+        val isEncrypted = meta?.isEncrypted == true || encMeta != null
+
+        val codec: SetStreamCodec = if (isEncrypted && encryptedSetManager != null) {
+            try {
+                encryptedSetManager.resolveCodecForSet(vaultTreeUri, setId, isEncrypted = true)
+            } catch (e: Exception) {
+                PlainSetStreamCodec
+            }
+        } else {
+            PlainSetStreamCodec
+        }
+
         val candidates = when {
             isDrill -> {
-                val activeGen = manifestRepository.loadCurrentGeneration(vaultTreeUri, setId)
+                val activeGen = manifestRepository.loadCurrentGeneration(vaultTreeUri, setId, codec)
                 activeGen.entries.values.filter { it.status == "present" }.shuffled().take(10)
             }
             selectedEntries != null -> selectedEntries
             else -> {
-                val activeGen = manifestRepository.loadCurrentGeneration(vaultTreeUri, setId)
+                val activeGen = manifestRepository.loadCurrentGeneration(vaultTreeUri, setId, codec)
                 activeGen.entries.values.filter { it.status == "present" }
             }
         }
@@ -131,7 +149,7 @@ class RestorePlanner(
             val vaultRelPath = if (entry.status == "deleted" && !entry.deletedPath.isNullOrEmpty()) {
                 entry.deletedPath
             } else {
-                "$setName/${entry.path}"
+                codec.activeVaultPath(setName, entry.path)
             }
 
             val existingSet = when (destination) {

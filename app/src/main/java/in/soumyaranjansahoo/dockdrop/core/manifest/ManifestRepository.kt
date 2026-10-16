@@ -1,6 +1,9 @@
 package `in`.soumyaranjansahoo.dockdrop.core.manifest
 
 import android.net.Uri
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.PlainSetStreamCodec
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.SetStreamCodec
 import `in`.soumyaranjansahoo.dockdrop.core.storage.StorageGateway
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,7 +12,8 @@ import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 
 open class ManifestRepository(
-    private val storageGateway: StorageGateway
+    private val storageGateway: StorageGateway,
+    private val encryptedSetManager: EncryptedSetManager? = null
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -90,11 +94,45 @@ open class ManifestRepository(
         val result = mutableListOf<DiscoveredBackupSet>()
 
         for (setId in setDirNames) {
-            val generation = loadCurrentGeneration(vaultTreeUri, setId)
+            val metadata = readSetMetadata(vaultTreeUri, setId)
+            val encMeta = encryptedSetManager?.readEncryptionMetadata(vaultTreeUri, setId)
+            val isEncrypted = metadata?.isEncrypted == true || encMeta != null
+
+            val codec = try {
+                if (encryptedSetManager != null) {
+                    encryptedSetManager.resolveCodecForSet(vaultTreeUri, setId, isEncrypted)
+                } else {
+                    PlainSetStreamCodec
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+            if (isEncrypted && codec == null) {
+                // Set is encrypted and currently locked: return placeholder so UI can display S19 Unlock
+                val headText = storageGateway.readText(vaultTreeUri, ".dockdrop/sets/$setId/HEAD")?.trim()
+                val headGen = headText?.toLongOrNull() ?: 1L
+                val setName = metadata?.setName ?: "Backup ($setId)"
+                result.add(
+                    DiscoveredBackupSet(
+                        setId = setId,
+                        setName = setName,
+                        deviceLabel = driveInfo.deviceLabel,
+                        driveId = driveInfo.driveId,
+                        generation = ManifestGeneration(headGen, emptyMap(), ""),
+                        sourceLabels = metadata?.sourceLabels ?: emptyList(),
+                        lastModifiedMs = metadata?.updatedAtMs ?: driveInfo.createdAt,
+                        isEncrypted = true
+                    )
+                )
+                continue
+            }
+
+            val activeCodec = codec ?: PlainSetStreamCodec
+            val generation = loadCurrentGeneration(vaultTreeUri, setId, activeCodec)
             if (generation.generationNumber <= 0L && generation.entries.isEmpty()) {
                 continue
             }
-            val metadata = readSetMetadata(vaultTreeUri, setId)
 
             // Infer source labels if not in metadata
             val inferredSourceLabels = if (metadata != null && metadata.sourceLabels.isNotEmpty()) {
@@ -115,7 +153,7 @@ open class ManifestRepository(
                     generation = generation,
                     sourceLabels = inferredSourceLabels,
                     lastModifiedMs = lastModified,
-                    isEncrypted = metadata?.isEncrypted ?: false
+                    isEncrypted = isEncrypted
                 )
             )
         }
@@ -128,7 +166,8 @@ open class ManifestRepository(
      */
     suspend fun loadCurrentGeneration(
         vaultTreeUri: Uri,
-        setId: String
+        setId: String,
+        codec: SetStreamCodec = PlainSetStreamCodec
     ): ManifestGeneration = withContext(Dispatchers.IO) {
         val setDir = ".dockdrop/sets/$setId"
         val headPath = "$setDir/HEAD"
@@ -136,13 +175,13 @@ open class ManifestRepository(
 
         val headGen = headText?.toLongOrNull()
         if (headGen != null && headGen > 0) {
-            val gen = tryLoadGeneration(vaultTreeUri, setId, headGen)
+            val gen = tryLoadGeneration(vaultTreeUri, setId, headGen, codec)
             if (gen != null) return@withContext gen
         }
 
-        // Fallback: If HEAD is missing or points to invalid generation, probe backwards from 100
+        // Fallback: If HEAD is missing or points to invalid generation, probe backwards from 50
         for (candidateGen in 50L downTo 1L) {
-            val gen = tryLoadGeneration(vaultTreeUri, setId, candidateGen)
+            val gen = tryLoadGeneration(vaultTreeUri, setId, candidateGen, codec)
             if (gen != null) {
                 // Repair HEAD atomically
                 try {
@@ -170,9 +209,10 @@ open class ManifestRepository(
     suspend fun commitGeneration(
         vaultTreeUri: Uri,
         setId: String,
-        allEntries: List<ManifestEntry>
+        allEntries: List<ManifestEntry>,
+        codec: SetStreamCodec = PlainSetStreamCodec
     ): ManifestGeneration = withContext(Dispatchers.IO) {
-        val currentGen = loadCurrentGeneration(vaultTreeUri, setId)
+        val currentGen = loadCurrentGeneration(vaultTreeUri, setId, codec)
         val newGenNumber = currentGen.generationNumber + 1
         val setDir = ".dockdrop/sets/$setId"
 
@@ -180,9 +220,10 @@ open class ManifestRepository(
         val shaRelPath = "$setDir/manifest.$newGenNumber.sha256"
         val headRelPath = "$setDir/HEAD"
 
-        // 1. Write manifest.<newGen>.ndjson.part while hashing
+        // 1. Write manifest.<newGen>.ndjson.part while hashing plaintext bytes
         val digest = MessageDigest.getInstance("SHA-256")
-        storageGateway.openDestinationPartOutputStream(vaultTreeUri, ndjsonRelPath).use { outStream ->
+        val rawPartOut = storageGateway.openDestinationPartOutputStream(vaultTreeUri, ndjsonRelPath)
+        codec.wrapOutputStream(rawPartOut).use { outStream ->
             for (entry in allEntries) {
                 val line = json.encodeToString(entry) + "\n"
                 val bytes = line.toByteArray(Charsets.UTF_8)
@@ -224,7 +265,8 @@ open class ManifestRepository(
     private suspend fun tryLoadGeneration(
         vaultTreeUri: Uri,
         setId: String,
-        genNumber: Long
+        genNumber: Long,
+        codec: SetStreamCodec
     ): ManifestGeneration? {
         val setDir = ".dockdrop/sets/$setId"
         val ndjsonPath = "$setDir/manifest.$genNumber.ndjson"
@@ -234,27 +276,33 @@ open class ManifestRepository(
         val expectedSha = expectedShaLine.substringBefore(" ").trim()
         if (expectedSha.length != 64) return null
 
-        val ndjsonContent = storageGateway.readText(vaultTreeUri, ndjsonPath) ?: return null
-
-        // Verify SHA-256 of the NDJSON text
-        val digest = MessageDigest.getInstance("SHA-256")
-        val computedSha = digest.digest(ndjsonContent.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-
-        if (!computedSha.equals(expectedSha, ignoreCase = true)) {
-            return null // Checksum mismatch, invalid generation
-        }
-
         val entries = mutableMapOf<String, ManifestEntry>()
-        ndjsonContent.lineSequence().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.isNotEmpty()) {
-                try {
-                    val entry = json.decodeFromString<ManifestEntry>(trimmed)
-                    entries[entry.path] = entry
-                } catch (e: Exception) {
-                    // skip malformed line
+        val digest = MessageDigest.getInstance("SHA-256")
+
+        try {
+            val rawIn = storageGateway.openDestinationInputStream(vaultTreeUri, ndjsonPath)
+            codec.wrapInputStream(rawIn).bufferedReader(Charsets.UTF_8).useLines { lines ->
+                for (line in lines) {
+                    val lineBytes = (line + "\n").toByteArray(Charsets.UTF_8)
+                    digest.update(lineBytes)
+                    val trimmed = line.trim()
+                    if (trimmed.isNotEmpty()) {
+                        try {
+                            val entry = json.decodeFromString<ManifestEntry>(trimmed)
+                            entries[entry.path] = entry
+                        } catch (e: Exception) {
+                            // skip malformed line
+                        }
+                    }
                 }
             }
+        } catch (e: Exception) {
+            return null
+        }
+
+        val computedSha = digest.digest().joinToString("") { "%02x".format(it) }
+        if (!computedSha.equals(expectedSha, ignoreCase = true)) {
+            return null // Checksum mismatch, invalid generation
         }
 
         return ManifestGeneration(

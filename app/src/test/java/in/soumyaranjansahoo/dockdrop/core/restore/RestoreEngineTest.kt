@@ -61,7 +61,7 @@ class RestoreEngineTest {
             ByteArrayInputStream(ByteArray(0))
 
         override suspend fun openDestinationInputStream(vaultTreeUri: Uri, relativePath: String): InputStream {
-            val bytes = vaultFiles[relativePath]
+            val bytes = vaultFiles[relativePath] ?: destFiles[relativePath]
                 ?: throw IllegalArgumentException("Vault file not found: $relativePath")
             return ByteArrayInputStream(bytes)
         }

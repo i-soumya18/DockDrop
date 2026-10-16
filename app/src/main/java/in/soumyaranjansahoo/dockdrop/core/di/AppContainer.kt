@@ -28,8 +28,12 @@ class AppContainer(val context: Context) {
         SetRepository(database)
     }
 
+    val encryptedSetManager: `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager by lazy {
+        `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager(storageGateway)
+    }
+
     val manifestRepository: ManifestRepository by lazy {
-        ManifestRepository(storageGateway)
+        ManifestRepository(storageGateway, encryptedSetManager)
     }
 
     val engine: DropEngine by lazy {
@@ -38,7 +42,8 @@ class AppContainer(val context: Context) {
             manifestRepository = manifestRepository,
             database = database,
             setRepository = setRepository,
-            scope = applicationScope
+            scope = applicationScope,
+            encryptedSetManager = encryptedSetManager
         )
     }
 
@@ -49,7 +54,8 @@ class AppContainer(val context: Context) {
     val restorePlanner: `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner by lazy {
         `in`.soumyaranjansahoo.dockdrop.core.restore.RestorePlanner(
             storageGateway = storageGateway,
-            manifestRepository = manifestRepository
+            manifestRepository = manifestRepository,
+            encryptedSetManager = encryptedSetManager
         )
     }
 
@@ -57,7 +63,8 @@ class AppContainer(val context: Context) {
         `in`.soumyaranjansahoo.dockdrop.core.restore.RestoreEngine(
             storageGateway = storageGateway,
             context = context,
-            scope = applicationScope
+            scope = applicationScope,
+            encryptedSetManager = encryptedSetManager
         )
     }
 

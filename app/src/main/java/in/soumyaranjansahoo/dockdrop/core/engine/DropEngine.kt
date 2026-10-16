@@ -1,12 +1,17 @@
 package `in`.soumyaranjansahoo.dockdrop.core.engine
 
 import android.net.Uri
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.PlainSetStreamCodec
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.SetStreamCodec
 import `in`.soumyaranjansahoo.dockdrop.core.database.DropDatabase
+import `in`.soumyaranjansahoo.dockdrop.core.database.JournalDao
 import `in`.soumyaranjansahoo.dockdrop.core.database.JournalEntry
 import `in`.soumyaranjansahoo.dockdrop.core.database.JournalStatus
 import `in`.soumyaranjansahoo.dockdrop.core.database.updateStatus
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.ManifestEntry
 import `in`.soumyaranjansahoo.dockdrop.core.manifest.ManifestRepository
+import `in`.soumyaranjansahoo.dockdrop.core.manifest.SetMetadata
 import `in`.soumyaranjansahoo.dockdrop.core.model.AttentionReason
 import `in`.soumyaranjansahoo.dockdrop.core.model.DeletionPolicy
 import `in`.soumyaranjansahoo.dockdrop.core.model.DockInfo
@@ -18,6 +23,8 @@ import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SkippedFile
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.core.model.VerificationLevel
+import `in`.soumyaranjansahoo.dockdrop.core.policy.DeletionPolicyPlanner
+import `in`.soumyaranjansahoo.dockdrop.core.policy.PolicyCheckResult
 import `in`.soumyaranjansahoo.dockdrop.core.repository.SetRepository
 import `in`.soumyaranjansahoo.dockdrop.core.storage.SourceFileInfo
 import `in`.soumyaranjansahoo.dockdrop.core.storage.StorageError
@@ -43,44 +50,52 @@ import java.util.UUID
 class DropEngine(
     private val storageGateway: StorageGateway,
     private val manifestRepository: ManifestRepository,
-    private val journalDao: `in`.soumyaranjansahoo.dockdrop.core.database.JournalDao,
+    private val journalDao: JournalDao,
     private val setRepository: SetRepository,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val encryptedSetManager: EncryptedSetManager? = null
 ) {
     constructor(
         storageGateway: StorageGateway,
         manifestRepository: ManifestRepository,
         database: DropDatabase,
         setRepository: SetRepository,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        encryptedSetManager: EncryptedSetManager? = null
     ) : this(
         storageGateway = storageGateway,
         manifestRepository = manifestRepository,
         journalDao = database.journalDao(),
         setRepository = setRepository,
-        scope = scope
+        scope = scope,
+        encryptedSetManager = encryptedSetManager
     )
 
     private val _state = MutableStateFlow<DropState>(DropState.NoDock)
     val state: StateFlow<DropState> = _state.asStateFlow()
 
     private var activeJob: Job? = null
-    private var isPaused = false
+    @Volatile
+    private var isPaused: Boolean = false
+
+    @Volatile
+    private var allowMassDeleteOverride: Boolean = false
+
+    private var currentDock: DockInfo? = null
 
     fun updateDockState(dockInfo: DockInfo?) {
-        if (_state.value is DropState.Dropping || _state.value is DropState.Verifying) {
-            if (dockInfo == null || !dockInfo.isMounted) {
-                // Cable pulled mid-drop!
-                val current = _state.value
-                val prog = when (current) {
-                    is DropState.Dropping -> current.progress
-                    is DropState.Verifying -> DropProgress(
+        currentDock = dockInfo
+        if (dockInfo == null) {
+            val currentState = _state.value
+            if (currentState is DropState.Dropping || currentState is DropState.Verifying) {
+                _state.value = DropState.Interrupted(
+                    DropProgress(
                         setId = "",
-                        currentFolder = current.currentFolder,
-                        folderIndex = current.folderIndex,
-                        totalFolders = current.totalFolders,
-                        copiedFiles = current.verifiedFiles,
-                        totalFiles = current.totalFiles,
+                        currentFolder = "",
+                        folderIndex = 0,
+                        totalFolders = 0,
+                        copiedFiles = 0,
+                        totalFiles = 0,
                         copiedBytes = 0L,
                         totalBytes = 0L,
                         speedMbS = 0.0,
@@ -88,103 +103,68 @@ class DropEngine(
                         estMinutesRemaining = 0.0,
                         currentFilePath = ""
                     )
-                    else -> null
-                }
-                activeJob?.cancel()
-                if (prog != null) {
-                    _state.value = DropState.Interrupted(prog)
-                } else {
-                    _state.value = DropState.NoDock
-                }
-            }
-            return
-        }
-
-        if (dockInfo == null || !dockInfo.isMounted) {
-            val current = _state.value
-            if (current is DropState.Interrupted) {
-                // Keep interrupted
-            } else {
+                )
+            } else if (currentState !is DropState.Resumable) {
                 _state.value = DropState.NoDock
             }
         } else {
-            val current = _state.value
-            if (current is DropState.Interrupted) {
-                _state.value = DropState.Resumable(current.progress)
-            } else if (current is DropState.NoDock || current is DropState.DockDetected) {
+            val currentState = _state.value
+            if (currentState is DropState.NoDock) {
                 _state.value = DropState.DockDetected(dockInfo)
-                scope.launch(Dispatchers.IO) {
-                    checkDockStatusAndJournal(dockInfo)
-                }
             }
         }
     }
 
-    private suspend fun checkDockStatusAndJournal(dockInfo: DockInfo) {
-        val sets = setRepository.allSets.first()
-        val matchingSet = sets.firstOrNull { it.dockVolumeUuid == dockInfo.volumeUuid } ?: return
-        val unfinishedJournal = journalDao.getJournalForSet(matchingSet.id)
-        if (unfinishedJournal.isNotEmpty()) {
-            val copied = unfinishedJournal.count { it.status == JournalStatus.COPIED.name || it.status == JournalStatus.VERIFIED.name }
-            val total = unfinishedJournal.size
-            val copiedBytes = unfinishedJournal.filter { it.status == JournalStatus.COPIED.name || it.status == JournalStatus.VERIFIED.name }.sumOf { it.sizeBytes }
-            val totalBytes = unfinishedJournal.sumOf { it.sizeBytes }
-            val progress = DropProgress(
-                setId = matchingSet.id,
-                currentFolder = "",
-                folderIndex = 0,
-                totalFolders = 1,
-                copiedFiles = copied,
-                totalFiles = total,
-                copiedBytes = copiedBytes,
-                totalBytes = totalBytes,
-                speedMbS = 0.0,
-                filesPerSec = 0.0,
-                estMinutesRemaining = 0.0,
-                currentFilePath = ""
-            )
-            if (_state.value is DropState.DockDetected) {
-                _state.value = DropState.Resumable(progress)
-            }
-        }
-    }
+    var lastActiveSet: SetDefinition? = null
+        private set
+    var lastActiveFolders: List<SourceFolder> = emptyList()
+        private set
 
     fun startDrop(set: SetDefinition, sourceFolders: List<SourceFolder>) {
         if (activeJob?.isActive == true) return
+        lastActiveSet = set
+        lastActiveFolders = sourceFolders
         isPaused = false
-
         activeJob = scope.launch(Dispatchers.IO) {
             executePipeline(set, sourceFolders)
         }
     }
 
+    fun confirmMassDeleteAndResume(set: SetDefinition? = null, sourceFolders: List<SourceFolder>? = null) {
+        val targetSet = set ?: lastActiveSet
+        val targetFolders = sourceFolders ?: lastActiveFolders
+        if (targetSet != null) {
+            allowMassDeleteOverride = true
+            startDrop(targetSet, targetFolders)
+        }
+    }
+
+    fun switchToKeepAndResume(set: SetDefinition? = null, sourceFolders: List<SourceFolder>? = null) {
+        val targetSet = set ?: lastActiveSet
+        val targetFolders = sourceFolders ?: lastActiveFolders
+        if (targetSet != null) {
+            scope.launch {
+                val updated = targetSet.copy(deletionPolicy = DeletionPolicy.KEEP, mirrorConfirmed = false)
+                setRepository.updateSet(updated)
+                allowMassDeleteOverride = false
+                startDrop(updated, targetFolders)
+            }
+        }
+    }
+
     fun pause(reason: PauseReason = PauseReason.USER_REQUESTED) {
+        if (isPaused) return
         if (reason == PauseReason.SYSTEM_TIMEOUT) {
             val current = _state.value
             val prog = when (current) {
                 is DropState.Dropping -> current.progress
-                is DropState.Verifying -> DropProgress(
-                    setId = "",
-                    currentFolder = current.currentFolder,
-                    folderIndex = current.folderIndex,
-                    totalFolders = current.totalFolders,
-                    copiedFiles = current.verifiedFiles,
-                    totalFiles = current.totalFiles,
-                    copiedBytes = 0L,
-                    totalBytes = 0L,
-                    speedMbS = 0.0,
-                    filesPerSec = 0.0,
-                    estMinutesRemaining = 0.0,
-                    currentFilePath = ""
-                )
                 is DropState.Paused -> current.progress
                 else -> null
             }
             activeJob?.cancel()
+            isPaused = false
             if (prog != null) {
                 _state.value = DropState.Resumable(prog)
-            } else {
-                _state.value = DropState.NoDock
             }
             return
         }
@@ -262,22 +242,67 @@ class DropEngine(
                 deviceLabel = android.os.Build.MODEL
             )
 
+            // Resolve codec per AGENTS.md Handoff Rule 5 (Engine never branches on isEncrypted)
+            val codec: SetStreamCodec = encryptedSetManager?.resolveCodecForSet(
+                vaultTreeUri = vaultUri,
+                setId = set.id,
+                isEncrypted = set.isEncrypted,
+                keystoreWrappedMkHex = set.keystoreWrappedMkHex
+            ) ?: PlainSetStreamCodec
+
             // Stage 1 & 2: Scan & Diff
-            val activeManifest = manifestRepository.loadCurrentGeneration(vaultUri, set.id)
+            val activeManifest = manifestRepository.loadCurrentGeneration(vaultUri, set.id, codec)
             val manifestEntries = activeManifest.entries.toMutableMap()
 
             // Scan all source folders using batch cursor queries
-            data class SourceItem(val folderLabel: String, val info: SourceFileInfo, val relVaultPath: String)
+            data class SourceItem(val folderLabel: String, val info: SourceFileInfo, val pathInSet: String)
             val allSourceItems = mutableListOf<SourceItem>()
 
             for (folder in sourceFolders) {
                 val treeUri = Uri.parse(folder.treeUriString)
                 storageGateway.listSourceFiles(treeUri).collect { fileInfo ->
                     val pathInSet = "${folder.label}/${fileInfo.relativePath}"
-                    val relVaultPath = "${set.name}/$pathInSet"
-                    allSourceItems.add(SourceItem(folder.label, fileInfo, relVaultPath))
+                    allSourceItems.add(SourceItem(folder.label, fileInfo, pathInSet))
                 }
             }
+
+            // A4 Deletion & Retention Policy Evaluation (CLAUDE.md Rule 6)
+            val currentSourcePaths = allSourceItems.map { it.pathInSet }.toSet()
+            val policyResult = DeletionPolicyPlanner.evaluate(
+                setId = set.id,
+                policy = set.deletionPolicy,
+                retentionDays = set.retentionDays,
+                mirrorConfirmed = set.mirrorConfirmed,
+                allowMassDeleteOverride = allowMassDeleteOverride,
+                activeManifestEntries = manifestEntries,
+                currentSourcePaths = currentSourcePaths
+            )
+
+            when (policyResult) {
+                is PolicyCheckResult.RequireMirrorConfirmation -> {
+                    _state.value = DropState.Attention(
+                        AttentionReason.PermissionLost(
+                            folderLabel = "Mirror mode confirmation",
+                            folderUri = "Mirror mode requires explicit confirmation before execution."
+                        )
+                    )
+                    return
+                }
+                is PolicyCheckResult.TriggerMassDeleteGuard -> {
+                    _state.value = DropState.Attention(
+                        AttentionReason.MassDelete(
+                            count = policyResult.candidateCount,
+                            paths = policyResult.candidatePaths
+                        )
+                    )
+                    return
+                }
+                is PolicyCheckResult.Proceed -> {
+                    // Passed policy gate!
+                }
+            }
+
+            val retentionPlan = (policyResult as PolicyCheckResult.Proceed).plan
 
             // Load existing journal entries for resume support
             val existingJournal = journalDao.getJournalForSet(set.id).associateBy { it.relativePath }
@@ -288,7 +313,7 @@ class DropEngine(
             var plannedBytes = 0L
 
             for (item in allSourceItems) {
-                val pathInSet = "${item.folderLabel}/${item.info.relativePath}"
+                val pathInSet = item.pathInSet
                 val manifestEntry = manifestEntries[pathInSet]
                 val journalEntry = existingJournal[pathInSet]
 
@@ -297,22 +322,18 @@ class DropEngine(
                         manifestEntry.modifiedMs == item.info.lastModifiedMs
 
                 if (journalEntry != null && journalEntry.status == JournalStatus.VERIFIED.name) {
-                    // Already verified from prior run!
                     continue
                 }
 
                 if (journalEntry != null && journalEntry.status == JournalStatus.COPIED.name) {
-                    // Already copied to destination, only needs verification
                     filesToVerify.add(item)
                     continue
                 }
 
                 if (isUnchanged) {
-                    // File already backed up and unchanged
                     continue
                 }
 
-                // File is new or changed
                 filesToCopy.add(item)
                 plannedBytes += item.info.sizeBytes
             }
@@ -328,10 +349,9 @@ class DropEngine(
 
             // Populate Journal for newly planned files
             val newJournalEntries = filesToCopy.map { item ->
-                val pathInSet = "${item.folderLabel}/${item.info.relativePath}"
                 JournalEntry(
                     setId = set.id,
-                    relativePath = pathInSet,
+                    relativePath = item.pathInSet,
                     sourceFolderLabel = item.folderLabel,
                     sourceUriString = item.info.uri.toString(),
                     sizeBytes = item.info.sizeBytes,
@@ -354,8 +374,8 @@ class DropEngine(
                     kotlinx.coroutines.delay(200)
                 }
 
-                val pathInSet = "${item.folderLabel}/${item.info.relativePath}"
-                val relVaultPath = "${set.name}/$pathInSet"
+                val pathInSet = item.pathInSet
+                val relVaultPath = codec.activeVaultPath(set.name, pathInSet)
 
                 journalDao.updateStatus(set.id, pathInSet, JournalStatus.COPYING.name)
 
@@ -365,7 +385,8 @@ class DropEngine(
                     var fileBytesWritten = 0L
 
                     storageGateway.openSourceInputStream(item.info.uri).use { inputStream ->
-                        storageGateway.openDestinationPartOutputStream(vaultUri, relVaultPath).use { outputStream ->
+                        val rawPartOut = storageGateway.openDestinationPartOutputStream(vaultUri, relVaultPath)
+                        codec.wrapOutputStream(rawPartOut).use { outputStream ->
                             var bytesRead: Int
                             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                                 while (isPaused) {
@@ -442,7 +463,6 @@ class DropEngine(
             }
 
             // Stage 4: Verify Pass (Deferred FIFO Destination Re-read per ADR-002)
-            // Deferred re-read pass ensures earlier files are evicted from the Linux VFS RAM cache
             val verifiedEntries = mutableListOf<ManifestEntry>()
             var verifiedCount = 0
 
@@ -451,8 +471,8 @@ class DropEngine(
                     kotlinx.coroutines.delay(200)
                 }
 
-                val pathInSet = "${item.folderLabel}/${item.info.relativePath}"
-                val relVaultPath = "${set.name}/$pathInSet"
+                val pathInSet = item.pathInSet
+                val relVaultPath = codec.activeVaultPath(set.name, pathInSet)
 
                 _state.value = DropState.Verifying(
                     currentFolder = item.folderLabel,
@@ -468,7 +488,8 @@ class DropEngine(
                 var destinationSha: String? = null
                 try {
                     val digest = MessageDigest.getInstance("SHA-256")
-                    storageGateway.openDestinationInputStream(vaultUri, relVaultPath).use { inStream ->
+                    val rawIn = storageGateway.openDestinationInputStream(vaultUri, relVaultPath)
+                    codec.wrapInputStream(rawIn).use { inStream ->
                         var r: Int
                         while (inStream.read(buffer).also { r = it } != -1) {
                             digest.update(buffer, 0, r)
@@ -517,47 +538,65 @@ class DropEngine(
                 }
             }
 
-            // Stage 5: Commit Protocol (Manifest & Policy Agent A4)
-            // Handle deletions per Rule 6 (Keep mode): move deleted files to _deleted/
-            val currentSourcePaths = allSourceItems.map { "${it.folderLabel}/${it.info.relativePath}" }.toSet()
-            val deletedFromPhone = manifestEntries.values.filter {
-                it.status == "present" && !currentSourcePaths.contains(it.path)
-            }
-
+            // Stage 5: Commit Protocol & Deletion Plan Execution (A4)
             var keptDeletionsCount = 0
             val dateFolder = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val deletedEntryUpdates = mutableMapOf<String, ManifestEntry>()
 
-            if (deletedFromPhone.isNotEmpty()) {
-                for (del in deletedFromPhone) {
-                    val srcRelVaultPath = "${set.name}/${del.path}"
-                    val dstRelVaultPath = "_deleted/${set.name}/$dateFolder/${del.path}"
+            // 1. Move newly deleted files to _deleted/ (KEEP / KEEP_N_DAYS)
+            for (del in retentionPlan.filesToMoveToDeleted) {
+                val srcRelVaultPath = codec.activeVaultPath(set.name, del.path)
+                val dstRelVaultPath = codec.deletedVaultPath(set.name, dateFolder, del.path)
+                try {
+                    storageGateway.move(vaultUri, srcRelVaultPath, dstRelVaultPath)
+                    keptDeletionsCount++
+                    deletedEntryUpdates[del.path] = del.copy(
+                        status = "deleted",
+                        deletedDate = dateFolder,
+                        deletedPath = dstRelVaultPath
+                    )
+                } catch (e: Exception) {
+                    deletedEntryUpdates[del.path] = del.copy(status = "deleted")
+                }
+            }
+
+            // 2. Delete files from active location (MIRROR)
+            for (del in retentionPlan.filesToDeleteFromActive) {
+                val srcRelVaultPath = codec.activeVaultPath(set.name, del.path)
+                try {
+                    storageGateway.delete(vaultUri, srcRelVaultPath)
+                } catch (e: Exception) {
+                    // non-fatal if already removed
+                }
+            }
+
+            // 3. Purge expired deleted entries from SSD (KEEP_N_DAYS retention job or MIRROR cleanup)
+            for (del in retentionPlan.expiredDeletedEntriesToPurge) {
+                if (!del.deletedPath.isNullOrEmpty()) {
                     try {
-                        storageGateway.move(vaultUri, srcRelVaultPath, dstRelVaultPath)
-                        keptDeletionsCount++
-                        deletedEntryUpdates[del.path] = del.copy(
-                            status = "deleted",
-                            deletedDate = dateFolder,
-                            deletedPath = dstRelVaultPath
-                        )
+                        storageGateway.delete(vaultUri, del.deletedPath)
                     } catch (e: Exception) {
-                        deletedEntryUpdates[del.path] = del.copy(status = "deleted")
+                        // non-fatal
                     }
                 }
             }
 
             // Assemble new manifest generation
+            val purgedPaths = retentionPlan.expiredDeletedEntriesToPurge.map { it.path }.toSet()
+            val mirrorDeletedPaths = retentionPlan.filesToDeleteFromActive.map { it.path }.toSet()
+
             val updatedManifestEntries = mutableMapOf<String, ManifestEntry>()
-            // Retain existing entries
             for ((p, e) in manifestEntries) {
+                if (purgedPaths.contains(p) || mirrorDeletedPaths.contains(p)) {
+                    continue
+                }
                 if (!currentSourcePaths.contains(p)) {
-                    // Marked as deleted
                     updatedManifestEntries[p] = deletedEntryUpdates[p] ?: e.copy(status = "deleted")
                 } else {
                     updatedManifestEntries[p] = e
                 }
             }
-            // Overwrite/add verified entries
+
             for (v in verifiedEntries) {
                 updatedManifestEntries[v.path] = v
             }
@@ -565,14 +604,15 @@ class DropEngine(
             val committedGeneration = manifestRepository.commitGeneration(
                 vaultTreeUri = vaultUri,
                 setId = set.id,
-                allEntries = updatedManifestEntries.values.toList()
+                allEntries = updatedManifestEntries.values.toList(),
+                codec = codec
             )
 
             // Write Set metadata for cross-device & new-phone discovery
             try {
                 manifestRepository.writeSetMetadata(
                     vaultTreeUri = vaultUri,
-                    metadata = `in`.soumyaranjansahoo.dockdrop.core.manifest.SetMetadata(
+                    metadata = SetMetadata(
                         setId = set.id,
                         setName = set.name,
                         sourceLabels = sourceFolders.map { it.label },
@@ -583,6 +623,9 @@ class DropEngine(
             } catch (e: Exception) {
                 // non-fatal
             }
+
+            // Reset mass-delete override for future drops
+            allowMassDeleteOverride = false
 
             // Stage 6: Sealed Receipt (S10)
             val elapsedTotalSec = maxOf(1L, (System.currentTimeMillis() - startTimeMs) / 1000L)
@@ -626,7 +669,6 @@ class DropEngine(
 
         } catch (e: Exception) {
             if (e is CancellationException) {
-                // user stopped or paused
                 return
             }
             if (e is StorageError.VolumeGone) {

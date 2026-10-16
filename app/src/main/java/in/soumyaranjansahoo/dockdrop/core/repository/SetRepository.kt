@@ -54,6 +54,10 @@ open class SetRepository(
         setDao.updateSet(updated)
     }
 
+    suspend fun updateSet(set: SetDefinition) {
+        setDao.updateSet(SetEntity.fromDomain(set))
+    }
+
     suspend fun deleteSet(id: String) {
         setDao.deleteSet(id)
         setDao.deleteSourceFoldersForSet(id)

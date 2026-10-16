@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.PlainSetStreamCodec
+import `in`.soumyaranjansahoo.dockdrop.core.crypto.SetStreamCodec
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
@@ -21,7 +24,8 @@ class RestoreEngine(
     private val storageGateway: StorageGateway,
     private val context: Context? = null,
     private val scope: CoroutineScope,
-    private val cacheDir: File? = context?.cacheDir
+    private val cacheDir: File? = context?.cacheDir,
+    private val encryptedSetManager: EncryptedSetManager? = null
 ) {
 
     private val _state = MutableStateFlow<RestoreState>(RestoreState.Idle)
@@ -63,6 +67,16 @@ class RestoreEngine(
         val totalBytes = plan.totalBytesToCopy
         var lastUiEmission = 0L
 
+        val codec: SetStreamCodec = if (encryptedSetManager != null) {
+            try {
+                encryptedSetManager.resolveCodecForSet(vaultUri, plan.setId, isEncrypted = true)
+            } catch (e: Exception) {
+                PlainSetStreamCodec
+            }
+        } else {
+            PlainSetStreamCodec
+        }
+
         try {
             for ((index, item) in plan.itemsToTransfer.withIndex()) {
                 val folderIndex = distinctFolders.indexOf(item.sourceFolderLabel).coerceAtLeast(0) + 1
@@ -99,6 +113,7 @@ class RestoreEngine(
                     plan = plan,
                     item = item,
                     buffer = buffer,
+                    codec = codec,
                     onHashVerified = {
                         restoredFiles++
                         restoredBytes += item.manifestEntry.sizeBytes
@@ -197,6 +212,7 @@ class RestoreEngine(
         plan: RestorePlan,
         item: RestoreItem,
         buffer: ByteArray,
+        codec: SetStreamCodec = PlainSetStreamCodec,
         onHashVerified: () -> Unit,
         onTimestampPreserved: () -> Unit,
         onRecordScanPath: (Uri, String) -> Unit,
@@ -212,7 +228,8 @@ class RestoreEngine(
                 val partFile = File(drillDir, "${item.resolvedTargetRelPath}.part")
                 partFile.parentFile?.mkdirs()
 
-                storageGateway.openDestinationInputStream(vaultUri, item.vaultRelativePath).use { inStream ->
+                val rawIn = storageGateway.openDestinationInputStream(vaultUri, item.vaultRelativePath)
+                codec.wrapInputStream(rawIn).use { inStream ->
                     partFile.outputStream().use { outStream ->
                         var r: Int
                         while (inStream.read(buffer).also { r = it } != -1) {
@@ -248,7 +265,8 @@ class RestoreEngine(
                 }
 
                 // 1. Stream to .part on destination while hashing
-                storageGateway.openDestinationInputStream(vaultUri, item.vaultRelativePath).use { inStream ->
+                val rawIn = storageGateway.openDestinationInputStream(vaultUri, item.vaultRelativePath)
+                codec.wrapInputStream(rawIn).use { inStream ->
                     storageGateway.openDestinationPartOutputStream(targetTreeUri, item.resolvedTargetRelPath).use { outStream ->
                         var r: Int
                         while (inStream.read(buffer).also { r = it } != -1) {

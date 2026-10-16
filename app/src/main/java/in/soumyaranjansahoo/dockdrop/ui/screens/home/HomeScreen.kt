@@ -55,6 +55,7 @@ fun HomeScreen(
     onNavigateToReceipt: () -> Unit,
     onNavigateToRestore: () -> Unit = {},
     onOpenKeepAliveClick: () -> Unit = {},
+    onSetClick: (SetDefinition) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
@@ -289,7 +290,7 @@ fun HomeScreen(
             }
 
             items(sets) { set ->
-                SetCard(set = set, onClick = {})
+                SetCard(set = set, onClick = { onSetClick(set) })
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
