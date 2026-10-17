@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.PersistableBundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,7 +32,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -57,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,9 +69,13 @@ import `in`.soumyaranjansahoo.dockdrop.ui.components.SecureWindowEffect
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockLabel
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSm
+import java.util.Locale
 
 @Composable
 fun EncryptionSetupScreen(
@@ -120,7 +122,7 @@ fun EncryptionSetupScreen(
                     out.write(kit.toByteArray(Charsets.UTF_8))
                 }
                 keySavedToFile = true
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // non-fatal
             }
         }
@@ -136,10 +138,13 @@ fun EncryptionSetupScreen(
                     if (currentStep > 1) currentStep-- else onCancel()
                 },
                 actions = {
-                    TextButton(onClick = onCancel) {
+                    TextButton(
+                        onClick = onCancel,
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) {
                         Text(
-                            "Cancel",
-                            color = colors.textTertiary,
+                            text = "Cancel",
+                            color = colors.textSecondary,
                             style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
@@ -150,6 +155,7 @@ fun EncryptionSetupScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(colors.bg)
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
@@ -181,8 +187,8 @@ fun EncryptionSetupScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
+                        .heightIn(min = 56.dp),
+                    shape = RoundedCornerShape(RadiusMd),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock
@@ -194,7 +200,7 @@ fun EncryptionSetupScreen(
                             2 -> "Next: Review & Confirm"
                             else -> "Enable Hardware Encryption"
                         },
-                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        style = DockBody.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
@@ -216,7 +222,7 @@ fun EncryptionSetupScreen(
                 for (i in 1..3) {
                     val isFinished = i <= currentStep
                     val barColor by animateColorAsState(
-                        targetValue = if (isFinished) colors.dock else colors.outline.copy(alpha = 0.35f),
+                        targetValue = if (isFinished) colors.dock else colors.outline.copy(alpha = 0.45f),
                         label = "stepProgress"
                     )
                     Box(
@@ -228,15 +234,19 @@ fun EncryptionSetupScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             when (currentStep) {
                 1 -> {
                     // (a) Passphrase
-                    Text("Protect with a passphrase", style = DockHeadline, color = colors.textPrimary)
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Your backup will be encrypted with AES-256-GCM. We cannot recover it for you if lost.",
+                        text = "Protect with a passphrase",
+                        style = DockHeadline,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Your backup will be encrypted with AES-256-GCM. Because keys never leave your device, we cannot recover your passphrase if lost.",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
@@ -249,31 +259,45 @@ fun EncryptionSetupScreen(
                             passphrase = it
                             passphraseError = null
                         },
-                        label = { Text("Vault Passphrase") },
+                        label = { Text("Vault passphrase", style = DockBodySmall) },
                         trailingIcon = {
-                            IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
+                            IconButton(
+                                onClick = { passphraseVisible = !passphraseVisible },
+                                modifier = Modifier.size(48.dp)
+                            ) {
                                 Icon(
                                     imageVector = if (passphraseVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                    contentDescription = "Toggle visibility",
+                                    contentDescription = if (passphraseVisible) "Hide passphrase" else "Show passphrase",
                                     tint = colors.textSecondary
                                 )
                             }
                         },
                         visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(RadiusSm),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = colors.dock,
+                            unfocusedBorderColor = colors.outline,
                             focusedLabelColor = colors.dock,
+                            unfocusedLabelColor = colors.textSecondary,
                             cursorColor = colors.dock
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // 4-Bar Strength Meter
+                    // 4-Bar Strength Meter using semantic strength tokens
                     val score = calculateStrengthScore(passphrase)
+                    val activeStrengthColor = when (score) {
+                        1 -> colors.strengthWeak
+                        2 -> colors.strengthMedium
+                        3 -> colors.dock
+                        4 -> colors.strengthStrong
+                        else -> colors.textTertiary
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -281,13 +305,7 @@ fun EncryptionSetupScreen(
                     ) {
                         for (i in 1..4) {
                             val active = score >= i
-                            val barColor = when {
-                                !active -> colors.outline.copy(alpha = 0.3f)
-                                score == 1 -> colors.danger
-                                score == 2 -> colors.attention
-                                score == 3 -> Color(0xFF6366F1)
-                                else -> colors.seal
-                            }
+                            val barColor = if (active) activeStrengthColor else colors.outline.copy(alpha = 0.35f)
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -298,26 +316,25 @@ fun EncryptionSetupScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = getStrengthLabel(score),
                             style = DockMono.copy(
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = when (score) {
-                                    1 -> colors.danger
-                                    2 -> colors.attention
-                                    3 -> Color(0xFF6366F1)
-                                    4 -> colors.seal
-                                    else -> colors.textTertiary
-                                }
+                                color = activeStrengthColor
                             )
                         )
-                        Text("Min 8 characters", style = DockMono.copy(fontSize = 11.sp), color = colors.textTertiary)
+                        Text(
+                            text = "Min 8 chars",
+                            style = DockMono.copy(fontSize = 11.sp),
+                            color = colors.textTertiary
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -328,30 +345,41 @@ fun EncryptionSetupScreen(
                             confirmPassphrase = it
                             passphraseError = null
                         },
-                        label = { Text("Confirm Vault Passphrase") },
+                        label = { Text("Confirm vault passphrase", style = DockBodySmall) },
                         visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(RadiusSm),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = colors.dock,
+                            unfocusedBorderColor = colors.outline,
                             focusedLabelColor = colors.dock,
+                            unfocusedLabelColor = colors.textSecondary,
                             cursorColor = colors.dock
                         )
                     )
 
                     if (passphraseError != null) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(passphraseError!!, style = DockBodySmall, color = colors.danger)
+                        Text(
+                            text = passphraseError!!,
+                            style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = colors.danger
+                        )
                     }
                 }
 
                 2 -> {
                     // (b) Recovery Key
-                    Text("Save your recovery key", style = DockHeadline, color = colors.textPrimary)
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "If you forget your passphrase, this 32-character key is the ONLY way to restore your backup.",
+                        text = "Save your recovery key",
+                        style = DockHeadline,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "If you forget your passphrase, this 32-character key is the only way to unlock your backup.",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
@@ -361,9 +389,10 @@ fun EncryptionSetupScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
-                        colors = CardDefaults.cardColors(containerColor = colors.surface)
+                            .clip(RoundedCornerShape(RadiusMd))
+                            .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
+                        colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,8 +404,8 @@ fun EncryptionSetupScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "RECOVERY KEY (32 CHARACTERS)",
-                                    style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                    text = "RECOVERY KEY · 32 CHARACTERS",
+                                    style = DockLabel,
                                     color = colors.textTertiary
                                 )
                             }
@@ -385,9 +414,10 @@ fun EncryptionSetupScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(RadiusSm))
                                     .background(colors.surfaceRaised)
-                                    .padding(14.dp)
+                                    .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(RadiusSm))
+                                    .padding(16.dp)
                             ) {
                                 Text(
                                     text = formatChunkedKey(recoveryKey),
@@ -421,21 +451,27 @@ fun EncryptionSetupScreen(
                                 clipboard.setPrimaryClip(clip)
                                 keyCopied = true
                             },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(RadiusSm),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (keyCopied) colors.dock else colors.outline
+                            )
                         ) {
                             Icon(
                                 imageVector = if (keyCopied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
                                 contentDescription = null,
-                                tint = if (keyCopied) colors.seal else colors.textPrimary,
-                                modifier = Modifier.size(16.dp)
+                                tint = if (keyCopied) colors.dock else colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                if (keyCopied) "Copied ✓" else "Copy",
+                                text = if (keyCopied) "Copied" else "Copy",
                                 style = DockBodySmall.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (keyCopied) colors.seal else colors.textPrimary
+                                    color = if (keyCopied) colors.dock else colors.textPrimary
                                 )
                             )
                         }
@@ -444,21 +480,27 @@ fun EncryptionSetupScreen(
                             onClick = {
                                 fileExportLauncher.launch("DockDrop-Recovery-Key-$setName.txt")
                             },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp),
+                            shape = RoundedCornerShape(RadiusSm),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (keySavedToFile) colors.dock else colors.outline
+                            )
                         ) {
                             Icon(
                                 imageVector = if (keySavedToFile) Icons.Outlined.Check else Icons.Outlined.Download,
                                 contentDescription = null,
-                                tint = if (keySavedToFile) colors.seal else colors.textPrimary,
-                                modifier = Modifier.size(16.dp)
+                                tint = if (keySavedToFile) colors.dock else colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                if (keySavedToFile) "Saved ✓" else "Save File",
+                                text = if (keySavedToFile) "Saved" else "Save File",
                                 style = DockBodySmall.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (keySavedToFile) colors.seal else colors.textPrimary
+                                    color = if (keySavedToFile) colors.dock else colors.textPrimary
                                 )
                             )
                         }
@@ -467,81 +509,129 @@ fun EncryptionSetupScreen(
                     Spacer(modifier = Modifier.height(28.dp))
 
                     // Verification gate
-                    Text("Verification check", style = DockBody.copy(fontWeight = FontWeight.Bold), color = colors.textPrimary)
+                    Text(
+                        text = "Confirm recovery key",
+                        style = DockTitle.copy(fontSize = 17.sp),
+                        color = colors.textPrimary
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Enter the last 4 characters of your recovery key to confirm you saved it:",
+                        text = "Enter the last 4 characters of your recovery key to verify you saved it:",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = userLastFour,
                         onValueChange = {
                             if (it.length <= 4) {
-                                userLastFour = it.uppercase()
+                                userLastFour = it.uppercase(Locale.US)
                                 gateError = null
                             }
                         },
-                        placeholder = { Text("e.g. ${recoveryKey.takeLast(4)}") },
+                        placeholder = {
+                            Text(
+                                text = "Last 4 characters (e.g. ${recoveryKey.takeLast(4)})",
+                                style = DockMono.copy(color = colors.textTertiary)
+                            )
+                        },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        textStyle = DockMono.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary),
+                        shape = RoundedCornerShape(RadiusSm),
+                        textStyle = DockMono.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        ),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = colors.dock,
+                            unfocusedBorderColor = colors.outline,
                             focusedLabelColor = colors.dock,
+                            unfocusedLabelColor = colors.textSecondary,
                             cursorColor = colors.dock
                         )
                     )
 
                     if (gateError != null) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(gateError!!, style = DockBodySmall, color = colors.danger)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = gateError!!,
+                            style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = colors.danger
+                        )
                     }
                 }
 
                 3 -> {
-                    // (c) Confirmation
-                    Text("Encryption configured", style = DockHeadline, color = colors.textPrimary)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // (c) Confirmation (Uses colors.dock rather than premature seal green per Rule 2)
                     Text(
-                        "Your backup will be cryptographically sealed. Passphrases are never sent over any network.",
+                        text = "Encryption ready",
+                        style = DockHeadline,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Your Set will be encrypted before bytes touch your SSD. Keys never leave your phone.",
                         style = DockBodySmall,
                         color = colors.textSecondary
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .border(1.dp, colors.seal.copy(alpha = 0.4f), RoundedCornerShape(18.dp)),
-                        colors = CardDefaults.cardColors(containerColor = colors.seal.copy(alpha = 0.05f))
+                            .clip(RoundedCornerShape(RadiusMd))
+                            .border(1.dp, colors.dock.copy(alpha = 0.45f), RoundedCornerShape(RadiusMd)),
+                        colors = CardDefaults.cardColors(containerColor = colors.dock.copy(alpha = 0.08f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Outlined.CheckCircle,
                                     contentDescription = null,
-                                    tint = colors.seal,
+                                    tint = colors.dock,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("VAULT SPECIFICATIONS", style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold), color = colors.seal)
+                                Text(
+                                    text = "VAULT SPECIFICATIONS",
+                                    style = DockLabel,
+                                    color = colors.dock
+                                )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("• Cipher: AES-256-GCM chunked streaming (DDC1)", style = DockBodySmall, color = colors.textPrimary)
-                            Text("• Key derivation: Scrypt 32MB / N=32768 memory hardness", style = DockBodySmall, color = colors.textPrimary)
-                            Text("• Filenames: Obfuscated with HMAC-SHA256", style = DockBodySmall, color = colors.textPrimary)
-                            Text("• Offline unlock: Verified locally before any file is read", style = DockBodySmall, color = colors.textPrimary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "• Cipher: AES-256-GCM chunked streaming (DDC1)",
+                                style = DockBodySmall,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "• Key derivation: Scrypt 32 MB (N=32768) memory hardness",
+                                style = DockBodySmall,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "• Filenames: Obfuscated with HMAC-SHA256",
+                                style = DockBodySmall,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "• Offline unlock: Verified locally before any file is read",
+                                style = DockBodySmall,
+                                color = colors.textPrimary
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -563,9 +653,9 @@ private fun calculateStrengthScore(p: String): Int {
 private fun getStrengthLabel(score: Int): String {
     return when (score) {
         1 -> "Weak · Add more characters"
-        2 -> "Fair · Use letters and numbers"
-        3 -> "Good · Strong password"
-        4 -> "Excellent · Highly secure"
+        2 -> "Fair · Mix letters and numbers"
+        3 -> "Good · Strong passphrase"
+        4 -> "Excellent · High entropy"
         else -> "Enter passphrase"
     }
 }

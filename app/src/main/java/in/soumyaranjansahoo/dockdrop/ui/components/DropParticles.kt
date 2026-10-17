@@ -3,30 +3,34 @@ package `in`.soumyaranjansahoo.dockdrop.ui.components
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.ParticleDocument
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.ParticleOther
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.ParticlePhoto
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.ParticleVideo
+import java.util.Locale
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -42,7 +46,7 @@ data class Particle(
 @Composable
 fun DropParticles(
     filesPerSec: Double,
-    isReducedMotion: Boolean = `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion.current,
+    isReducedMotion: Boolean = LocalReducedMotion.current,
     currentFileName: String = "",
     reverseDirection: Boolean = false,
     modifier: Modifier = Modifier
@@ -51,47 +55,56 @@ fun DropParticles(
 
     if (isReducedMotion) {
         // Reduced motion fallback (DESIGN.md §5.3): clean tabular monospace counter
+        val formattedSpeed = String.format(Locale.US, "%.1f", filesPerSec)
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(80.dp)
+                .semantics {
+                    contentDescription = "Transfer speed: $formattedSpeed files per second"
+                },
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "${String.format("%.1f", filesPerSec)} files/s",
-                style = DockMono,
+                text = "$formattedSpeed files/s",
+                style = DockMono.copy(fontFeatureSettings = "tnum"),
                 color = colors.textSecondary
             )
         }
         return
     }
 
+    val currentSpeed by rememberUpdatedState(filesPerSec)
+    val currentFile by rememberUpdatedState(currentFileName)
+
     val particles = remember { mutableStateListOf<Particle>() }
     var nextId by remember { mutableStateOf(0L) }
     var lastEmitTimeMs by remember { mutableStateOf(0L) }
 
-    // Derive target active particles count (2 to 24) based on real files/sec log scale
-    val targetCount = if (filesPerSec <= 0.05) 0 else {
-        (2 + (filesPerSec * 1.5).toInt()).coerceIn(2, 24)
-    }
-
-    LaunchedEffect(filesPerSec) {
+    LaunchedEffect(isReducedMotion) {
         var lastFrameTime = 0L
         while (true) {
             withInfiniteAnimationFrameMillis { frameTimeMs ->
                 val dt = if (lastFrameTime == 0L) 0.016f else (frameTimeMs - lastFrameTime) / 1000f
                 lastFrameTime = frameTimeMs
 
+                val speed = currentSpeed
+                // Real-world files/sec log scale clamped to 2..24 particles (DESIGN.md §5.2.2 & §9)
+                val targetCount = if (speed <= 0.05) 0 else {
+                    (2 + (speed * 1.5).toInt()).coerceIn(2, 24)
+                }
+
                 // Spawn new particle if below target count and emission interval passed
-                val emitIntervalMs = if (filesPerSec > 0) (1000.0 / filesPerSec).coerceIn(80.0, 1500.0).toLong() else 2000L
+                val emitIntervalMs = if (speed > 0) (1000.0 / speed).coerceIn(80.0, 1500.0).toLong() else 2000L
                 if (particles.size < targetCount && frameTimeMs - lastEmitTimeMs >= emitIntervalMs) {
                     lastEmitTimeMs = frameTimeMs
-                    val ext = currentFileName.substringAfterLast(".", "").lowercase()
+                    val ext = currentFile.substringAfterLast(".", "").lowercase()
                     val tint = when (ext) {
-                        "jpg", "jpeg", "png", "heic", "webp", "dng" -> ParticlePhoto
-                        "mp4", "mov", "mkv", "avi" -> ParticleVideo
-                        "pdf", "doc", "docx", "txt", "zip" -> ParticleDocument
-                        else -> ParticleOther
+                        "jpg", "jpeg", "png", "heic", "webp", "dng" -> colors.categoryPhoto
+                        "mp4", "mov", "mkv", "avi" -> colors.categoryVideo
+                        "pdf", "doc", "docx", "txt", "zip" -> colors.categoryDocument
+                        "mp3", "wav", "flac", "m4a", "aac", "ogg" -> colors.categoryAudio
+                        else -> colors.categoryOther
                     }
                     particles.add(
                         Particle(
@@ -123,6 +136,7 @@ fun DropParticles(
             .fillMaxWidth()
             .height(140.dp)
             .graphicsLayer()
+            .clearAndSetSemantics { } // Decorative particles; telemetry read by status headline
     ) {
         val startX = size.width / 2f
         val startY = 8.dp.toPx()

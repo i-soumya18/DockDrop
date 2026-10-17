@@ -24,9 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockLabel
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 
 /**
  * Standardized Material 3 Expressive Top App Bar with back navigation,
@@ -61,14 +64,14 @@ fun DockTopAppBar(
                 IconButton(
                     onClick = onBackClick,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = colors.textPrimary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             } else {
@@ -82,17 +85,18 @@ fun DockTopAppBar(
             ) {
                 Text(
                     text = title,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = DockTitle.copy(fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
-                        fontSize = 12.sp,
+                        style = DockLabel.copy(fontSize = 12.sp, fontWeight = FontWeight.Normal),
                         color = colors.textSecondary,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -103,7 +107,7 @@ fun DockTopAppBar(
         if (showDivider) {
             HorizontalDivider(
                 color = colors.outline.copy(alpha = 0.4f),
-                thickness = 0.75.dp
+                thickness = 1.dp
             )
         }
     }

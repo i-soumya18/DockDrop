@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -112,7 +115,8 @@ fun WelcomeScreen(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onFinishOnboarding()
-                    }
+                    },
+                    modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
                 ) {
                     Text(
                         text = "Skip",
@@ -128,11 +132,14 @@ fun WelcomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Expanding Capsule Page Dots (Google M3 Expressive)
                 Row(
+                    modifier = Modifier.semantics {
+                        contentDescription = "Page ${pagerState.currentPage + 1} of 3"
+                    },
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -140,7 +147,7 @@ fun WelcomeScreen(
                         val isSelected = pagerState.currentPage == index
                         val dotWidth by animateDpAsState(
                             targetValue = if (isSelected) 26.dp else 8.dp,
-                            animationSpec = if (isReducedMotion) spring() else spring(
+                            animationSpec = if (isReducedMotion) androidx.compose.animation.core.snap() else spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessMediumLow
                             ),
@@ -166,13 +173,17 @@ fun WelcomeScreen(
                             onFinishOnboarding()
                         } else {
                             scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                if (isReducedMotion) {
+                                    pagerState.scrollToPage(pagerState.currentPage + 1)
+                                } else {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
                             }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
@@ -220,7 +231,7 @@ fun WelcomeScreen(
         ModalBottomSheet(
             onDismissRequest = { showHowToCheckSheet = false },
             containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -233,13 +244,13 @@ fun WelcomeScreen(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(if (colors.isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)),
+                            .background(colors.badgeBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = if (colors.isDark) Color(0xFF86EFAC) else Color(0xFF15803D),
+                            tint = colors.badgeContent,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -276,8 +287,9 @@ fun WelcomeScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .height(52.dp)
+                        .defaultMinSize(minHeight = 48.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock
@@ -476,7 +488,7 @@ private fun WelcomePageThree(
             // Radial ambient
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFFDCFCE7).copy(alpha = 0.5f), Color.Transparent),
+                    colors = listOf(colors.badgeBg.copy(alpha = 0.4f), Color.Transparent),
                     center = center,
                     radius = size.width * 0.48f
                 ),
@@ -502,16 +514,16 @@ private fun WelcomePageThree(
                 lineTo(center.x - 42.dp.toPx(), center.y - 28.dp.toPx())
                 close()
             }
-            drawPath(path = shield, color = Color(0xFF15803D), style = Stroke(width = 3.dp.toPx()))
+            drawPath(path = shield, color = colors.badgeContent, style = Stroke(width = 3.dp.toPx()))
 
             // Keyhole / lock center
             drawCircle(
-                color = Color(0xFF15803D),
+                color = colors.badgeContent,
                 radius = 9.dp.toPx(),
                 center = Offset(center.x, center.y - 6.dp.toPx())
             )
             drawRoundRect(
-                color = Color(0xFF15803D),
+                color = colors.badgeContent,
                 topLeft = Offset(center.x - 4.5.dp.toPx(), center.y - 6.dp.toPx()),
                 size = Size(9.dp.toPx(), 18.dp.toPx()),
                 cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -525,23 +537,25 @@ private fun WelcomePageThree(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFDCFCE7))
-            .border(1.dp, Color(0xFFBBF7D0), RoundedCornerShape(20.dp))
+            .background(colors.badgeBg)
+            .border(1.dp, colors.badgeBorder, RoundedCornerShape(20.dp))
             .padding(horizontal = 14.dp, vertical = 6.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Fully offline: No network access"
+            }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.Lock,
                 contentDescription = null,
-                tint = Color(0xFF15803D),
+                tint = colors.badgeContent,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "No network access",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF15803D)
+                style = DockTheme.typography.label,
+                color = colors.badgeContent
             )
         }
     }
@@ -571,8 +585,9 @@ private fun WelcomePageThree(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .clickable { onHowToCheckClick() }
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .clickable(role = androidx.compose.ui.semantics.Role.Button) { onHowToCheckClick() }
+            .defaultMinSize(minHeight = 48.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -119,7 +120,7 @@ fun KeepAliveScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 val canFinish = hasNotificationPerm && isBatteryExempt
@@ -128,8 +129,8 @@ fun KeepAliveScreen(
                     enabled = canFinish,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock,
@@ -139,13 +140,16 @@ fun KeepAliveScreen(
                 ) {
                     Text(
                         "Done",
-                        fontSize = 15.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
-                TextButton(onClick = onRemindMeLaterClick) {
+                TextButton(
+                    onClick = onRemindMeLaterClick,
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                ) {
                     Text(
                         "Remind me later",
                         fontSize = 14.sp,
@@ -185,8 +189,8 @@ fun KeepAliveScreen(
             // Step 1: Notifications
             GoogleStepCard(
                 icon = Icons.Outlined.Notifications,
-                iconBg = Color(0xFFEFF6FF),
-                iconTint = Color(0xFF2563EB),
+                iconBg = colors.dock.copy(alpha = 0.12f),
+                iconTint = colors.dock,
                 title = "Allow notifications",
                 description = "Required to display live backup progress and keep the transfer service alive.",
                 isDone = hasNotificationPerm,
@@ -205,8 +209,8 @@ fun KeepAliveScreen(
             // Step 2: Battery optimization exemption
             GoogleStepCard(
                 icon = Icons.Outlined.BatteryChargingFull,
-                iconBg = Color(0xFFECFDF5),
-                iconTint = Color(0xFF10B981),
+                iconBg = colors.seal.copy(alpha = 0.12f),
+                iconTint = if (colors.isDark) colors.seal else colors.sealText,
                 title = "Don't restrict battery",
                 description = "Allows DockDrop to stream and verify files when your phone screen is locked.",
                 isDone = isBatteryExempt,
@@ -261,7 +265,7 @@ private fun GoogleStepCard(
                 stateDescription = if (isDone) "Completed" else "Action required"
             },
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -273,14 +277,14 @@ private fun GoogleStepCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (isDone) Color(0xFFDCFCE7) else iconBg),
+                    .background(if (isDone) colors.badgeBg else iconBg),
                 contentAlignment = Alignment.Center
             ) {
                 if (isDone) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Done",
-                        tint = Color(0xFF15803D),
+                        tint = colors.badgeContent,
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
@@ -320,7 +324,8 @@ private fun GoogleStepCard(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock
-                    )
+                    ),
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text(
                         actionLabel,
@@ -332,14 +337,14 @@ private fun GoogleStepCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFDCFCE7))
+                        .background(colors.badgeBg)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Allowed ✓",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF15803D)
+                        color = colors.badgeContent
                     )
                 }
             }
@@ -368,7 +373,7 @@ private fun SamsungStepCard(
                 RoundedCornerShape(16.dp)
             ),
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -376,13 +381,13 @@ private fun SamsungStepCard(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF5F3FF)),
+                        .background(colors.categoryVideo.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color(0xFF8B5CF6),
+                        tint = colors.categoryVideo,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -414,6 +419,7 @@ private fun SamsungStepCard(
                     .clip(RoundedCornerShape(10.dp))
                     .background(colors.surfaceRaised)
                     .clickable { onCheckedChange(!isConfirmed) }
+                    .defaultMinSize(minHeight = 48.dp)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -438,7 +444,9 @@ private fun SamsungStepCard(
 
             TextButton(
                 onClick = onOpenSettingsClick,
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .defaultMinSize(minHeight = 48.dp)
             ) {
                 Text(
                     text = "Open App Settings →",

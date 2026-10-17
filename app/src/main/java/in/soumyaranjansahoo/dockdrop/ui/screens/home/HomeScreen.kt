@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,14 +22,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Usb
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -39,6 +41,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,9 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +65,7 @@ import `in`.soumyaranjansahoo.dockdrop.ui.components.DockHero
 import `in`.soumyaranjansahoo.dockdrop.ui.navigation.Routes
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
@@ -82,18 +88,38 @@ fun HomeScreen(
 ) {
     val colors = DockTheme.colors
     var showOfflineSheet by remember { mutableStateOf(false) }
+    val activeSet = sets.firstOrNull()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         bottomBar = {
-            DockBottomBar(
-                currentRoute = Routes.HOME,
-                onNavigateToHome = { /* Already on Home */ },
-                onNavigateToRestore = onNavigateToRestore,
-                onNavigateToSettings = onNavigateToSettings,
-                hasHomeBadge = dropState is DropState.Dropping || dropState is DropState.Verifying
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.bg)
+            ) {
+                // Bottom-anchored 56dp Primary CTA
+                HomeBottomCta(
+                    dropState = dropState,
+                    sets = sets,
+                    activeSet = activeSet,
+                    onCreateSetClick = onCreateSetClick,
+                    onStartDropClick = onStartDropClick,
+                    onNavigateToDrop = onNavigateToDrop,
+                    onNavigateToReceipt = onNavigateToReceipt,
+                    onOpenKeepAliveClick = onOpenKeepAliveClick
+                )
+
+                // Expressive Navigation Bar
+                DockBottomBar(
+                    currentRoute = Routes.HOME,
+                    onNavigateToHome = { /* Current destination */ },
+                    onNavigateToRestore = onNavigateToRestore,
+                    onNavigateToSettings = onNavigateToSettings,
+                    hasHomeBadge = dropState is DropState.Dropping || dropState is DropState.Verifying
+                )
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -103,7 +129,7 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar: Wordmark "DockDrop" + "Offline by design >" pill badge
+            // 1. Top Bar: Wordmark + Accessible 100% Offline Trust Pill
             item {
                 Row(
                     modifier = Modifier
@@ -114,47 +140,54 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "DockDrop",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.5).sp,
+                        style = DockHeadline.copy(fontSize = 26.sp, letterSpacing = (-0.5).sp),
                         color = colors.textPrimary
                     )
 
-                    // Offline by design Pill Badge
-                    Row(
+                    // 100% Offline Trust Badge with >= 48dp interactive touch target
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(colors.surface)
-                            .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
-                            .clickable { showOfflineSheet = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "100% Offline guaranteed. Zero network permissions. Tap for verification details."
+                            }
+                            .clickable { showOfflineSheet = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = "Offline by design",
-                            tint = colors.dock,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Offline by design",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(colors.badgeBg)
+                                .border(1.dp, colors.badgeBorder, RoundedCornerShape(20.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = null,
+                                tint = colors.badgeContent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "100% Offline",
+                                style = DockBodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                                color = colors.badgeContent
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = colors.badgeContent.copy(alpha = 0.7f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // 2. Hero Section: SSD Connected & Circular Graphic
+            // 2. Hero Section: SSD Connected & Tactile Circular Graphic (~40% viewport)
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 val pct = when (dropState) {
@@ -165,12 +198,13 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
                         .clickable(enabled = dropState is DropState.Dropping || dropState is DropState.Verifying) {
                             onNavigateToDrop()
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    DockHero(state = dropState, progressPct = pct)
+                    DockHero(state = dropState, progressPct = pct, modifier = Modifier.size(160.dp))
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -178,225 +212,36 @@ fun HomeScreen(
                 val (headline, subline) = getHeroHeadlineAndSubline(dropState, sets)
                 Text(
                     text = headline,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary
+                    style = DockHeadline.copy(fontSize = 24.sp),
+                    color = colors.textPrimary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subline,
-                    fontSize = 14.sp,
-                    color = colors.textSecondary
+                    style = DockBodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = colors.textSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // 3. "Ready to back up" Action Card
-            item {
-                val activeSet = sets.firstOrNull()
-                val (cardTitle, cardSubtitle) = getActionCardDetails(dropState, activeSet)
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-                    colors = CardDefaults.cardColors(containerColor = colors.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp)
-                    ) {
-                        // Card Top Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    when {
-                                        dropState is DropState.Dropping || dropState is DropState.Verifying -> onNavigateToDrop()
-                                        dropState is DropState.Sealed || dropState is DropState.Partial -> onNavigateToReceipt()
-                                        activeSet != null -> onSetClick(activeSet)
-                                        else -> onCreateSetClick()
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(colors.surfaceRaised),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Description,
-                                    contentDescription = null,
-                                    tint = colors.dock,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(14.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = cardTitle,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = cardSubtitle,
-                                    fontSize = 13.sp,
-                                    color = colors.textSecondary
-                                )
-                            }
-
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = colors.textTertiary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Full width Primary Action Button
-                        when {
-                            sets.isEmpty() -> {
-                                Button(
-                                    onClick = onCreateSetClick,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.dock,
-                                        contentColor = colors.onDock
-                                    )
-                                ) {
-                                    Text(
-                                        "Create your first backup",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            dropState is DropState.Dropping || dropState is DropState.Verifying -> {
-                                Button(
-                                    onClick = onNavigateToDrop,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.dock,
-                                        contentColor = colors.onDock
-                                    )
-                                ) {
-                                    Text(
-                                        "View live backup",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            dropState is DropState.Sealed || dropState is DropState.Partial -> {
-                                Button(
-                                    onClick = onNavigateToReceipt,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (dropState is DropState.Sealed) colors.seal else colors.attention,
-                                        contentColor = colors.onDock
-                                    )
-                                ) {
-                                    Text(
-                                        "View Receipt",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            dropState is DropState.Resumable -> {
-                                Button(
-                                    onClick = { if (activeSet != null) onStartDropClick(activeSet) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.dock,
-                                        contentColor = colors.onDock
-                                    )
-                                ) {
-                                    Text(
-                                        "Resume backup",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            dropState is DropState.DockDetected || dropState is DropState.AwaitingConfirm -> {
-                                val targetSet = activeSet ?: sets.first()
-                                Button(
-                                    onClick = { onStartDropClick(targetSet) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.dock,
-                                        contentColor = colors.onDock
-                                    )
-                                ) {
-                                    Text(
-                                        "Back up now",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            else -> {
-                                Button(
-                                    onClick = { /* Waiting for SSD */ },
-                                    enabled = false,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        disabledContainerColor = colors.surfaceRaised,
-                                        disabledContentColor = colors.textTertiary
-                                    )
-                                ) {
-                                    Text(
-                                        "Plug in your SSD",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                    }
+            // 3. Attention / Resume Card (SCREENS.md S03 §3: ONLY shown if applicable)
+            if (dropState is DropState.Resumable || dropState is DropState.Attention || dropState is DropState.Interrupted || dropState is DropState.Partial) {
+                item {
+                    HomeAttentionCard(
+                        dropState = dropState,
+                        activeSet = activeSet,
+                        onStartDropClick = onStartDropClick,
+                        onNavigateToReceipt = onNavigateToReceipt,
+                        onOpenKeepAliveClick = onOpenKeepAliveClick
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 4. Section Header: "Backup Sets" + "+ New Set"
+            // 4. Section Header: "Backup Sets" + "+ New Set" Action
             item {
                 Row(
                     modifier = Modifier
@@ -407,24 +252,27 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Backup Sets",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = DockTitle,
                         color = colors.textPrimary
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    Box(
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Create a new backup set"
+                            }
+                            .clickable { onCreateSetClick() },
+                        contentAlignment = Alignment.CenterEnd
                     ) {
                         Text(
                             text = "+ New Set",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            style = DockBody.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
                             color = colors.dock,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable { onCreateSetClick() }
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -434,10 +282,10 @@ fun HomeScreen(
             if (sets.isEmpty()) {
                 item {
                     EmptySetsCard(onCreateSetClick = onCreateSetClick)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             } else {
-                items(sets) { set ->
+                items(sets, key = { it.id }) { set ->
                     RealSetCard(
                         set = set,
                         onClick = { onSetClick(set) }
@@ -446,158 +294,265 @@ fun HomeScreen(
                 }
             }
 
-            // 6. SSD Storage Card (matching mockup bottom card)
+            // 6. SSD Storage Hardware Card
             item {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 SsdStorageCard(dropState = dropState)
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
 
-    // Offline By Design Modal Sheet
+    // Modal Offline By Design Verification Sheet
     if (showOfflineSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showOfflineSheet = false },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(colors.seal.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = colors.seal,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Offline by design",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = "Zero network access guaranteed",
-                            fontSize = 13.sp,
-                            color = colors.textSecondary
-                        )
-                    }
-                }
+        OfflineByDesignModalSheet(onDismiss = { showOfflineSheet = false })
+    }
+}
 
-                Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun HomeBottomCta(
+    dropState: DropState,
+    sets: List<SetDefinition>,
+    activeSet: SetDefinition?,
+    onCreateSetClick: () -> Unit,
+    onStartDropClick: (SetDefinition) -> Unit,
+    onNavigateToDrop: () -> Unit,
+    onNavigateToReceipt: () -> Unit,
+    onOpenKeepAliveClick: () -> Unit
+) {
+    val colors = DockTheme.colors
+    val targetSet = activeSet ?: sets.firstOrNull()
 
-                Text(
-                    text = "DockDrop does not request or possess Android INTERNET or ACCESS_NETWORK_STATE permissions. Your data moves strictly through your phone's USB-C port to your portable SSD.",
-                    fontSize = 14.sp,
-                    color = colors.textSecondary,
-                    lineHeight = 21.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when {
+            // First run, no set created yet
+            sets.isEmpty() -> {
                 Button(
-                    onClick = { showOfflineSheet = false },
+                    onClick = onCreateSetClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Create your first backup set"
+                        },
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock
                     )
                 ) {
-                    Text("Got it", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Create your first backup",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptySetsCard(
-    onCreateSetClick: () -> Unit
-) {
-    val colors = DockTheme.colors
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.dock.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Folder,
-                    contentDescription = null,
-                    tint = colors.dock,
-                    modifier = Modifier.size(28.dp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Safeguard your photos, videos, and documents",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = "No backup sets yet",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Choose folders like Camera, Downloads, or Documents to safeguard on your external SSD.",
-                fontSize = 13.sp,
-                color = colors.textSecondary,
-                lineHeight = 18.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onCreateSetClick,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.dock,
-                    contentColor = colors.onDock
-                ),
-                modifier = Modifier.height(44.dp)
-            ) {
+            // In-flight backup
+            dropState is DropState.Dropping || dropState is DropState.Verifying -> {
+                Button(
+                    onClick = onNavigateToDrop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "View live backup progress"
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Text(
+                        text = "View live backup",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "+ Create Backup Set",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Backup running in background · Safe to lock phone",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
+                )
+            }
+
+            // Sealed backup
+            dropState is DropState.Sealed -> {
+                Button(
+                    onClick = onNavigateToReceipt,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "View sealed backup receipt"
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.surfaceRaised,
+                        contentColor = colors.textPrimary
+                    )
+                ) {
+                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = null, tint = colors.seal, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "View Receipt",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Last backup 100% verified · Safe to unplug",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
+                )
+            }
+
+            // Partial backup (amber earned status, never green)
+            dropState is DropState.Partial -> {
+                Button(
+                    onClick = onNavigateToReceipt,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Review skipped files in receipt"
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.attention,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Icon(imageVector = Icons.Outlined.Warning, contentDescription = null, tint = colors.onDock, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Review skipped files",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Backup completed with skipped files",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
+                )
+            }
+
+            // Resumable backup
+            dropState is DropState.Resumable -> {
+                Button(
+                    onClick = { if (targetSet != null) onStartDropClick(targetSet) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Resume backup of ${targetSet?.name ?: "set"}"
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null, tint = colors.onDock, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Resume backup",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${dropState.progress.percentage}% already copied",
+                    style = DockBodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = colors.textTertiary
+                )
+            }
+
+            // SSD Connected & Ready
+            dropState is DropState.DockDetected || dropState is DropState.AwaitingConfirm -> {
+                Button(
+                    onClick = { if (targetSet != null) onStartDropClick(targetSet) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Start backup of ${targetSet?.name ?: "set"} now"
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Icon(imageVector = Icons.Outlined.PlayArrow, contentDescription = null, tint = colors.onDock, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Back up now",
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                val dockLabel = when (dropState) {
+                    is DropState.DockDetected -> dropState.dock.userLabel
+                    is DropState.AwaitingConfirm -> dropState.dock.userLabel
+                    else -> "SSD"
+                }
+                Text(
+                    text = "Target: $dockLabel · Ready for transfer",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
+                )
+            }
+
+            // No SSD connected (Eliminating line 374 no-op: Interactive keep-alive guidance)
+            else -> {
+                Button(
+                    onClick = onOpenKeepAliveClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "SSD not connected. Connect your portable SSD via USB-C to back up, or tap for connection tips and background settings."
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.surfaceRaised,
+                        contentColor = colors.textPrimary
+                    )
+                ) {
+                    Icon(imageVector = Icons.Outlined.Usb, contentDescription = null, tint = colors.dock, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Plug in your SSD",
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Connect via USB-C to back up · Tap for help",
+                    style = DockBodySmall,
+                    color = colors.textTertiary
                 )
             }
         }
@@ -611,28 +566,40 @@ private fun RealSetCard(
 ) {
     val colors = DockTheme.colors
 
+    // Semantic category colors from DockColors (zero raw hexes)
     val (iconBg, iconTint, icon) = when {
         set.isEncrypted -> {
-            Triple(colors.seal.copy(alpha = 0.12f), colors.seal, Icons.Outlined.Lock)
+            Triple(
+                colors.dock.copy(alpha = 0.12f),
+                colors.dock,
+                Icons.Outlined.Lock
+            )
         }
         set.name.contains("Video", ignoreCase = true) || set.name.contains("Movie", ignoreCase = true) -> {
             Triple(
-                if (colors.isDark) Color(0xFF2E1065).copy(alpha = 0.5f) else Color(0xFFF5F3FF),
-                Color(0xFF8B5CF6),
+                colors.categoryVideo.copy(alpha = if (colors.isDark) 0.18f else 0.12f),
+                colors.categoryVideo,
                 Icons.Outlined.PlayCircle
             )
         }
         set.name.contains("Work", ignoreCase = true) || set.name.contains("Study", ignoreCase = true) || set.name.contains("Doc", ignoreCase = true) -> {
             Triple(
-                if (colors.isDark) Color(0xFF064E3B).copy(alpha = 0.5f) else Color(0xFFECFDF5),
-                Color(0xFF10B981),
+                colors.categoryDocument.copy(alpha = if (colors.isDark) 0.18f else 0.12f),
+                colors.categoryDocument,
                 Icons.Outlined.Folder
+            )
+        }
+        set.name.contains("Audio", ignoreCase = true) || set.name.contains("Music", ignoreCase = true) -> {
+            Triple(
+                colors.categoryAudio.copy(alpha = if (colors.isDark) 0.18f else 0.12f),
+                colors.categoryAudio,
+                Icons.Outlined.PlayCircle
             )
         }
         else -> {
             Triple(
-                if (colors.isDark) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFEFF6FF),
-                Color(0xFF2563EB),
+                colors.categoryPhoto.copy(alpha = if (colors.isDark) 0.18f else 0.12f),
+                colors.categoryPhoto,
                 Icons.Outlined.Image
             )
         }
@@ -640,17 +607,37 @@ private fun RealSetCard(
 
     val subtitle = if (set.dockUserLabel.isNotBlank()) "Target: ${set.dockUserLabel}" else "External SSD vault"
 
+    // Strict status & earned seal calculation
     val isSealed = set.lastStatus == "Sealed"
-    val sealedStatusText = when {
+    val isPartial = set.lastStatus == "Partial"
+    val isInterrupted = set.lastStatus == "Interrupted"
+
+    val (sealedStatusText, statusDotColor, isEarnedGreen) = when {
+        isPartial -> {
+            val fileDetail = if (set.lastSealedFiles > 0) " · ${set.lastSealedFiles} verified" else ""
+            Triple("Finished with skipped files$fileDetail", colors.attention, false)
+        }
+        isInterrupted -> {
+            Triple("Backup interrupted", colors.attention, false)
+        }
+        isSealed -> {
+            val timeAgo = if (set.lastSealedMs != null) {
+                val daysAgo = ((System.currentTimeMillis() - set.lastSealedMs) / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
+                if (daysAgo == 0L) "today" else "$daysAgo days ago"
+            } else "recently"
+            val filesStr = if (set.lastSealedFiles > 0) " · ${set.lastSealedFiles} files" else ""
+            Triple("Last sealed $timeAgo$filesStr", colors.seal, true)
+        }
         set.lastSealedMs != null -> {
+            // Backward-compatible fallback only when lastStatus was null
             val daysAgo = ((System.currentTimeMillis() - set.lastSealedMs) / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
             val timeAgo = if (daysAgo == 0L) "today" else "$daysAgo days ago"
             val filesStr = if (set.lastSealedFiles > 0) " · ${set.lastSealedFiles} files" else ""
-            "Last sealed $timeAgo$filesStr"
+            Triple("Last sealed $timeAgo$filesStr", colors.seal, true)
         }
-        isSealed -> "Sealed · verified"
-        set.lastStatus == "Partial" -> "Partial backup completed"
-        else -> "Not yet backed up"
+        else -> {
+            Triple("Not yet backed up", colors.textTertiary, false)
+        }
     }
 
     Card(
@@ -658,9 +645,13 @@ private fun RealSetCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = "Backup set ${set.name}, $subtitle, $sealedStatusText. Tap to view details."
+            }
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -688,30 +679,36 @@ private fun RealSetCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = set.name,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
                     color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 13.sp,
+                    style = DockBodySmall.copy(fontSize = 13.sp),
                     color = colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = sealedStatusText,
-                    fontSize = 12.sp,
-                    color = colors.textTertiary
+                    style = DockBodySmall.copy(fontSize = 12.sp, fontFeatureSettings = "tnum"),
+                    color = if (isPartial || isInterrupted) colors.attention else colors.textTertiary
                 )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isSealed || set.lastSealedMs != null) {
+                if (isEarnedGreen) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Sealed",
+                        contentDescription = "Sealed and verified",
                         tint = colors.seal,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else if (isPartial || isInterrupted) {
+                    Icon(
+                        imageVector = Icons.Outlined.Warning,
+                        contentDescription = if (isPartial) "Finished with skipped files" else "Backup interrupted",
+                        tint = colors.attention,
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
@@ -719,7 +716,7 @@ private fun RealSetCard(
                         modifier = Modifier
                             .size(10.dp)
                             .clip(CircleShape)
-                            .background(colors.textTertiary.copy(alpha = 0.6f))
+                            .background(statusDotColor.copy(alpha = 0.6f))
                     )
                 }
 
@@ -737,6 +734,124 @@ private fun RealSetCard(
 }
 
 @Composable
+private fun HomeAttentionCard(
+    dropState: DropState,
+    activeSet: SetDefinition?,
+    onStartDropClick: (SetDefinition) -> Unit,
+    onNavigateToReceipt: () -> Unit,
+    onOpenKeepAliveClick: () -> Unit
+) {
+    val colors = DockTheme.colors
+
+    val (accentColor, title, message, actionLabel, onAction) = when (dropState) {
+        is DropState.Resumable -> {
+            Tuple5(
+                colors.dock,
+                "Resume backup",
+                "${dropState.progress.percentage}% completed · ${dropState.progress.totalFiles - dropState.progress.copiedFiles} files remaining",
+                "Resume",
+                { if (activeSet != null) onStartDropClick(activeSet) }
+            )
+        }
+        is DropState.Interrupted -> {
+            Tuple5(
+                colors.attention,
+                "Backup interrupted",
+                "SSD disconnected at ${dropState.progress.percentage}%. Reconnect drive to continue.",
+                "Check connection",
+                onOpenKeepAliveClick
+            )
+        }
+        is DropState.Partial -> {
+            Tuple5(
+                colors.attention,
+                "Finished with ${dropState.skippedFiles.size} skipped",
+                "Some files could not be read. Tap to review skipped items.",
+                "Review",
+                onNavigateToReceipt
+            )
+        }
+        is DropState.Attention -> {
+            Tuple5(
+                colors.attention,
+                dropState.reason.title,
+                dropState.reason.message,
+                "Review",
+                onOpenKeepAliveClick
+            )
+        }
+        else -> return
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Amber / Dock leading vertical bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .defaultMinSize(minHeight = 72.dp)
+                    .background(accentColor)
+            )
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = message,
+                        style = DockBodySmall.copy(fontFeatureSettings = "tnum"),
+                        color = colors.textSecondary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = onAction,
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Text(
+                        text = actionLabel,
+                        style = DockBodySmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class Tuple5<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E
+)
+
+@Composable
 private fun SsdStorageCard(dropState: DropState) {
     val colors = DockTheme.colors
 
@@ -752,7 +867,7 @@ private fun SsdStorageCard(dropState: DropState) {
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = colors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         if (dockInfo != null) {
             val total = dockInfo.totalBytes
@@ -767,9 +882,9 @@ private fun SsdStorageCard(dropState: DropState) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.PhoneAndroid,
-                    contentDescription = "Storage",
-                    tint = colors.textPrimary,
+                    imageVector = Icons.Outlined.Storage,
+                    contentDescription = "SSD Storage",
+                    tint = colors.dock,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -783,13 +898,12 @@ private fun SsdStorageCard(dropState: DropState) {
                     ) {
                         Text(
                             text = "${dockInfo.userLabel} (${dockInfo.filesystem})",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                             color = colors.textPrimary
                         )
                         Text(
                             text = "${formatGb(total)} total",
-                            fontSize = 12.sp,
+                            style = DockMono.copy(fontSize = 12.sp),
                             color = colors.textSecondary
                         )
                     }
@@ -816,12 +930,12 @@ private fun SsdStorageCard(dropState: DropState) {
                     ) {
                         Text(
                             text = "${formatGb(used)} used",
-                            fontSize = 12.sp,
+                            style = DockMono.copy(fontSize = 12.sp),
                             color = colors.textSecondary
                         )
                         Text(
                             text = "${formatGb(free)} available",
-                            fontSize = 12.sp,
+                            style = DockMono.copy(fontSize = 12.sp),
                             color = colors.textSecondary
                         )
                     }
@@ -854,16 +968,14 @@ private fun SsdStorageCard(dropState: DropState) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "SSD storage",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
                         color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Plug in your USB-C portable SSD to view available capacity and start backing up.",
-                        fontSize = 12.sp,
-                        color = colors.textSecondary,
-                        lineHeight = 16.sp
+                        style = DockBodySmall.copy(fontSize = 12.sp),
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -871,7 +983,159 @@ private fun SsdStorageCard(dropState: DropState) {
     }
 }
 
+@Composable
+private fun EmptySetsCard(
+    onCreateSetClick: () -> Unit
+) {
+    val colors = DockTheme.colors
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.dock.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = colors.dock,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "No backup sets yet",
+                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                color = colors.textPrimary
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Choose folders like Camera, Downloads, or Documents to safeguard on your external SSD.",
+                style = DockBodySmall,
+                color = colors.textSecondary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onCreateSetClick,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.dock,
+                    contentColor = colors.onDock
+                ),
+                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+            ) {
+                Text(
+                    text = "+ Create Backup Set",
+                    style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OfflineByDesignModalSheet(onDismiss: () -> Unit) {
+    val colors = DockTheme.colors
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(colors.badgeBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Shield,
+                        contentDescription = null,
+                        tint = colors.badgeContent,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "Offline by design",
+                        style = DockTitle,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Zero network access guaranteed",
+                        style = DockBodySmall,
+                        color = colors.badgeContent
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "DockDrop does not request or possess Android INTERNET or ACCESS_NETWORK_STATE permissions. Your data moves strictly through your phone's USB-C port to your portable SSD.",
+                style = DockBody.copy(fontSize = 14.sp, lineHeight = 21.sp),
+                color = colors.textSecondary
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .defaultMinSize(minHeight = 48.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.dock,
+                    contentColor = colors.onDock
+                )
+            ) {
+                Text("Got it", style = DockBody.copy(fontWeight = FontWeight.Bold))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
 private fun formatGb(bytes: Long): String {
+    val gb = bytes.toDouble() / (1024 * 1024 * 1024)
+    return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
+}
+
+private fun formatBytes(bytes: Long): String {
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
     return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
 }
@@ -882,7 +1146,7 @@ private fun getHeroHeadlineAndSubline(state: DropState, sets: List<SetDefinition
             if (sets.isEmpty()) {
                 Pair("Welcome to DockDrop", "Zero cloud, zero internet — physical SSD backup")
             } else {
-                Pair("No SSD connected", "Plug in your portable drive to start")
+                Pair("Plug in your SSD", "Connect drive via USB-C to start backup")
             }
         }
         is DropState.DockDetected -> Pair("${state.dock.userLabel} connected", "${formatBytes(state.dock.freeBytes)} available · ${state.dock.filesystem}")
@@ -897,28 +1161,4 @@ private fun getHeroHeadlineAndSubline(state: DropState, sets: List<SetDefinition
         is DropState.Resumable -> Pair("Resume backup", "${state.progress.percentage}% done")
         is DropState.Attention -> Pair(state.reason.title, state.reason.message)
     }
-}
-
-private fun getActionCardDetails(state: DropState, activeSet: SetDefinition?): Pair<String, String> {
-    return when (state) {
-        is DropState.AwaitingConfirm -> Pair("Ready to back up", "${state.plannedFiles} new or changed files · about ${String.format("%.0f", state.estMinutes)} min")
-        is DropState.Dropping -> Pair("Backing up now", "${state.progress.percentage}% complete · ${state.progress.currentFolder}")
-        is DropState.Verifying -> Pair("Verifying backup", "Re-reading files for bit-level match")
-        is DropState.Sealed -> Pair("Backup complete", "100% verified · safe to unplug")
-        is DropState.Resumable -> Pair("Ready to resume", "${state.progress.percentage}% already copied")
-        is DropState.DockDetected -> Pair("Ready to back up", "Target drive: ${state.dock.userLabel}")
-        is DropState.NoDock -> {
-            if (activeSet != null) {
-                Pair("Connect your SSD", "Plug in drive to back up ${activeSet.name}")
-            } else {
-                Pair("Get started", "Configure which folders you want to protect")
-            }
-        }
-        else -> Pair("Ready to back up", "Offline physical backup")
-    }
-}
-
-private fun formatBytes(bytes: Long): String {
-    val gb = bytes.toDouble() / (1024 * 1024 * 1024)
-    return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
 }

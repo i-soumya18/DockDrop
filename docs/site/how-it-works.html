@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How It Works — DockDrop</title>
+  <meta name="description" content="Step-by-step walkthrough of how DockDrop backs up your Android phone to an SSD: plug in, tap, watch progress, receive your Seal Receipt." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg class="nav-icon" viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="22" rx="5" stroke="#4F8CFF" stroke-width="2.5"/><rect x="16" y="28" width="8" height="3" rx="1.5" fill="#4F8CFF"/><line x1="20" y1="6" x2="20" y2="14" stroke="#4F8CFF" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="nav-wordmark">DockDrop</span>
+      </a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html" style="color:var(--text-primary)">How it works</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <a href="index.html#download" class="btn btn-sm btn-primary">Get the app</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="features.html">Features</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="faq.html">FAQ</a>
+      <a href="index.html#download" class="btn btn-primary">Get the app</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="section page-hero" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79,140,255,0.08) 0%, transparent 70%);">
+    <div class="container">
+      <div class="section-label">How it works</div>
+      <h1 class="section-title">From plug-in to<br /><span class="accent">Sealed</span> in one tap</h1>
+      <p class="section-sub" style="margin: 16px auto 0;">No setup ritual after the first run. Every backup is verified before it&rsquo;s called done.</p>
+    </div>
+  </section>
+
+  <!-- First-time setup -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">First time</div>
+      <h2 class="section-title" style="margin-bottom: 48px">Set up in 2 minutes</h2>
+      <div class="steps-full">
+        <div class="step-full reveal">
+          <div class="step-full-num">1</div>
+          <div class="step-full-body">
+            <h3>Choose what to protect</h3>
+            <p>DockDrop suggests the folders that matter most: Camera, Pictures, WhatsApp Media, Documents. Tap to grant access. Each one shows its size estimate. You can add any sub-folder too.</p>
+            <p style="margin-top:8px">Note: Android 15 doesn&rsquo;t allow picking the entire Downloads folder root. DockDrop explains this and guides you to pick sub-folders instead.</p>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">2</div>
+          <div class="step-full-body">
+            <h3>Choose your SSD</h3>
+            <p>Plug in your external SSD. DockDrop shows its name, capacity ring, filesystem (exFAT recommended), and runs a write test &mdash; a 16 MB temp file that gives you your actual speed. This feed your first ETA estimate.</p>
+            <div class="detail-chip">Write test: 38 MB/s measured</div>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">3</div>
+          <div class="step-full-body">
+            <h3>Set the rules</h3>
+            <p>Three decisions, all with safe defaults: <strong>Deletion policy</strong> (keep deleted files on SSD &mdash; default), <strong>Encryption</strong> (off by default; AES-256 available), <strong>Battery threshold</strong> (20% default). Each shows a plain-language consequence: &ldquo;Result: deleted files move to _deleted/ on your SSD.&rdquo;</p>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">4</div>
+          <div class="step-full-body">
+            <h3>Name your Set and create it</h3>
+            <p>Give the backup Set a name (&ldquo;My Phone&rdquo; by default). Review the summary: folders, Dock, location, policy. Estimate: &ldquo;First backup: about 14.2 GB &middot; roughly 9&ndash;14 min.&rdquo;</p>
+            <p style="margin-top:8px">Tap <strong>Create backup set</strong>. If the SSD is plugged in, you&rsquo;re asked: &ldquo;Start the first backup now?&rdquo;</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Every subsequent backup -->
+  <section class="section" style="background: linear-gradient(180deg, transparent, rgba(79,140,255,0.03), transparent);">
+    <div class="container">
+      <div class="section-label">Every time after</div>
+      <h2 class="section-title" style="margin-bottom: 48px">Plug. Tap. Done.</h2>
+
+      <div class="steps-full">
+        <div class="step-full reveal">
+          <div class="step-full-num">1</div>
+          <div class="step-full-body">
+            <h3>SSD detected &lt;300 ms</h3>
+            <p>When you plug in your SSD, DockDrop receives a <code>USB_DEVICE_ATTACHED</code> broadcast in under 300 ms &mdash; verified on a Samsung Galaxy A14, even when the app is swiped away or the screen is off.</p>
+            <p style="margin-top:8px">A notification appears: <strong>&ldquo;Samsung T7 detected &middot; Tap to back up My Phone&rdquo;</strong>. The backup never starts without your tap.</p>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">2</div>
+          <div class="step-full-body">
+            <h3>Tap &ldquo;Start backup&rdquo;</h3>
+            <p>The plug-in sheet rises from the bottom with the SSD details &mdash; name, free space, filesystem. Below it: your Set name, how many files have changed, estimated time. Tap the button.</p>
+            <p style="margin-top:8px">You can lock your phone immediately. DockDrop runs as a foreground service and keeps the notification visible, showing live progress.</p>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">3</div>
+          <div class="step-full-body">
+            <h3>Live Drop</h3>
+            <p>The Drop screen shows files flowing from your phone to the SSD. Each folder segment lights up as it completes. Speed, ETA (smoothed, shown as a range when throughput is volatile), and a &ldquo;files/s&rdquo; counter are always visible.</p>
+            <p style="margin-top:8px">Pull the cable? DockDrop marks the journal checkpoint and posts: <strong>&ldquo;Backup interrupted at 63%. Plug the SSD back in to resume.&rdquo;</strong></p>
+            <div class="detail-chip">35.9 MB/s median &middot; SHA-256 computed during copy</div>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num">4</div>
+          <div class="step-full-body">
+            <h3>Verify</h3>
+            <p>After all folders are copied, DockDrop re-reads every file from the SSD and compares SHA-256 hashes. This pass runs after the full copy so it doesn&rsquo;t read from Linux&rsquo;s VFS page cache in RAM (which would give a false &ldquo;pass&rdquo;).</p>
+          </div>
+        </div>
+        <div class="connector"></div>
+        <div class="step-full reveal">
+          <div class="step-full-num seal">5</div>
+          <div class="step-full-body">
+            <h3 style="color: var(--seal)">Sealed &mdash; receipt prints</h3>
+            <p>The ring closes. A green checkmark draws. Your Receipt &ldquo;prints&rdquo; up from the Dock: files, size, duration, verification level used, confirmation that nothing was deleted from your phone.</p>
+            <p style="margin-top:8px"><strong>&ldquo;All writes finished. Safe to unplug.&rdquo;</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen showcase -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">App screenshots</div>
+      <h2 class="section-title" style="margin-bottom:48px">See it in action</h2>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:24px; align-items:start;">
+        <div style="text-align:center; reveal" class="reveal">
+          <div class="glass-card" style="border-radius:28px; overflow:hidden; margin-bottom:12px;">
+            <img src="assets/images/DockDrop SSD Backup Dashboard.png" alt="Home screen" style="width:100%; display:block;" />
+          </div>
+          <p style="font-size:13px; color:var(--text-tertiary); font-weight:600;">Home &mdash; SSD connected</p>
+        </div>
+        <div style="text-align:center; reveal" class="reveal">
+          <div class="glass-card" style="border-radius:28px; overflow:hidden; margin-bottom:12px;">
+            <img src="assets/images/Minimal Restore Progress Screen.png" alt="Restore progress" style="width:100%; display:block;" />
+          </div>
+          <p style="font-size:13px; color:var(--text-tertiary); font-weight:600;">Restore in progress</p>
+        </div>
+        <div style="text-align:center; reveal" class="reveal">
+          <div class="glass-card" style="border-radius:28px; overflow:hidden; margin-bottom:12px;">
+            <img src="assets/images/DockDrop Settings Screen.png" alt="Settings" style="width:100%; display:block;" />
+          </div>
+          <p style="font-size:13px; color:var(--text-tertiary); font-weight:600;">Settings</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Attention & edge cases -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">Edge cases</div>
+      <h2 class="section-title" style="margin-bottom:16px">What happens when things go wrong</h2>
+      <p class="section-sub" style="margin-bottom:48px">DockDrop is designed for the real world, not the happy path only.</p>
+      <div class="features-grid">
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon" style="background:rgba(251,191,36,0.1); border-color:rgba(251,191,36,0.2);">&#9888;</div>
+          <h3 class="feature-title" style="color:var(--attention)">SSD is full</h3>
+          <p class="feature-desc">DockDrop stops and shows exactly how much space is needed vs. how much is free. Nothing is corrupted &mdash; files copied so far are intact. You can choose fewer folders and continue.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#9888;</div>
+          <h3 class="feature-title" style="color:var(--attention)">Permission lost</h3>
+          <p class="feature-desc">If Android revokes a folder&rsquo;s permission mid-backup, DockDrop pauses and shows which folder needs re-granting. Nothing is lost. The journal remembers where it was.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#9888;</div>
+          <h3 class="feature-title" style="color:var(--attention)">Mass-delete guard</h3>
+          <p class="feature-desc">In Mirror mode: if more than 20% of a Set&rsquo;s files, or more than 500 files, would be removed in one Drop, the Drop stops and shows you the list before removing anything.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#9888;</div>
+          <h3 class="feature-title" style="color:var(--attention)">Service timeout</h3>
+          <p class="feature-desc">Android limits background services to 6 hours/day. If DockDrop is approaching the limit, it saves a journal checkpoint and posts &ldquo;Continue backup?&rdquo; &mdash; tap to resume from exactly where it stopped.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Soumya Ranjan Sahoo &middot; <a href="index.html">DockDrop</a> &middot; <a href="https://github.com/i-soumya18/DockDrop/blob/main/LICENSE">Apache 2.0</a></p>
+        <div class="footer-trust-chip">&#128274; Offline by design. Network permission: none.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

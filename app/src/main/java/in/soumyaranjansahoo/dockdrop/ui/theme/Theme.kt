@@ -56,8 +56,21 @@ fun DockDropTheme(
             dock = DarkDock,
             onDock = DarkOnDock,
             seal = DarkSeal,
+            sealText = DarkSealText,
             attention = DarkAttention,
+            attentionText = DarkAttentionText,
             danger = DarkDanger,
+            categoryPhoto = DarkCategoryPhoto,
+            categoryVideo = DarkCategoryVideo,
+            categoryDocument = DarkCategoryDocument,
+            categoryAudio = DarkCategoryAudio,
+            categoryOther = DarkCategoryOther,
+            badgeBg = DarkBadgeBg,
+            badgeBorder = DarkBadgeBorder,
+            badgeContent = DarkBadgeContent,
+            strengthWeak = DarkStrengthWeak,
+            strengthMedium = DarkStrengthMedium,
+            strengthStrong = DarkStrengthStrong,
             isDark = true
         )
     } else {
@@ -72,8 +85,21 @@ fun DockDropTheme(
             dock = LightDock,
             onDock = LightOnDock,
             seal = LightSeal,
+            sealText = LightSealText,
             attention = LightAttention,
+            attentionText = LightAttentionText,
             danger = LightDanger,
+            categoryPhoto = LightCategoryPhoto,
+            categoryVideo = LightCategoryVideo,
+            categoryDocument = LightCategoryDocument,
+            categoryAudio = LightCategoryAudio,
+            categoryOther = LightCategoryOther,
+            badgeBg = LightBadgeBg,
+            badgeBorder = LightBadgeBorder,
+            badgeContent = LightBadgeContent,
+            strengthWeak = LightStrengthWeak,
+            strengthMedium = LightStrengthMedium,
+            strengthStrong = LightStrengthStrong,
             isDark = false
         )
     }
@@ -98,4 +124,7 @@ object DockTheme {
     val colors: DockColors
         @Composable
         get() = LocalDockColors.current
+
+    val typography: DockTypography
+        get() = DockTypography
 }

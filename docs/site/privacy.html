@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy — DockDrop</title>
+  <meta name="description" content="DockDrop has no internet permission, no analytics, no accounts. Your files never leave your phone and your SSD. Full privacy details." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg class="nav-icon" viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="22" rx="5" stroke="#4F8CFF" stroke-width="2.5"/><rect x="16" y="28" width="8" height="3" rx="1.5" fill="#4F8CFF"/><line x1="20" y1="6" x2="20" y2="14" stroke="#4F8CFF" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="nav-wordmark">DockDrop</span>
+      </a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="privacy.html" style="color:var(--text-primary)">Privacy</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <a href="index.html#download" class="btn btn-sm btn-primary">Get the app</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="features.html">Features</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="faq.html">FAQ</a>
+      <a href="index.html#download" class="btn btn-primary">Get the app</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="section page-hero" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(52,211,153,0.06) 0%, transparent 70%);">
+    <div class="container">
+      <div class="section-label">Privacy</div>
+      <h1 class="section-title">Offline isn&rsquo;t a feature.<br /><span class="accent">It&rsquo;s the product.</span></h1>
+      <p class="section-sub" style="margin:16px auto 0;">DockDrop has no internet permission. Your files go from your phone to your SSD. Nowhere else. Ever.</p>
+    </div>
+  </section>
+
+  <!-- Permission table -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">Android permissions</div>
+      <h2 class="section-title" style="margin-bottom:16px">What DockDrop can and cannot do</h2>
+      <p class="section-sub" style="margin-bottom:40px;">This is the actual AndroidManifest.xml permission set. You can verify it yourself.</p>
+      <div class="glass-card reveal" style="padding:0; overflow:hidden;">
+        <table class="permission-table">
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th>Status</th>
+              <th>Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>INTERNET</td>
+              <td><span class="status-chip chip-denied">&#10005; Not declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">No cloud. No analytics. No remote config. CI fails if this appears.</td>
+            </tr>
+            <tr>
+              <td>ACCESS_NETWORK_STATE</td>
+              <td><span class="status-chip chip-denied">&#10005; Not declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Not needed. Not wanted. CI fails if this appears.</td>
+            </tr>
+            <tr>
+              <td>FOREGROUND_SERVICE</td>
+              <td><span class="status-chip chip-granted">&#10003; Declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Required to keep the backup running while the screen is off. Type: dataSync. Only starts on your tap.</td>
+            </tr>
+            <tr>
+              <td>FOREGROUND_SERVICE_DATA_SYNC</td>
+              <td><span class="status-chip chip-granted">&#10003; Declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">The specific service type for data transfer. Declared in Play Console.</td>
+            </tr>
+            <tr>
+              <td>POST_NOTIFICATIONS</td>
+              <td><span class="status-chip chip-granted">&#10003; Runtime-requested</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">To show backup progress and &ldquo;Tap to back up&rdquo; notifications. Requested on first run; backup works without it.</td>
+            </tr>
+            <tr>
+              <td>USB_PERMISSION (runtime)</td>
+              <td><span class="status-chip chip-granted">&#10003; Runtime-requested</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Android shows a system dialog: &ldquo;Allow DockDrop to access USB device?&rdquo; You grant it once per device.</td>
+            </tr>
+            <tr>
+              <td>SAF tree permissions</td>
+              <td><span class="status-chip chip-granted">&#10003; Per-folder via picker</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Storage Access Framework. You pick each folder in the system folder picker. Android grants read/write access to that tree only.</td>
+            </tr>
+            <tr>
+              <td>READ_MEDIA_IMAGES / VIDEO</td>
+              <td><span class="status-chip chip-denied">&#10005; Not declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Not needed. DockDrop uses SAF tree permissions instead, which are scoped to exactly the folders you grant.</td>
+            </tr>
+            <tr>
+              <td>MANAGE_EXTERNAL_STORAGE</td>
+              <td><span class="status-chip chip-denied">&#10005; Not declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">Not used in v1. DockDrop uses SAF only, which doesn&rsquo;t require this broad permission.</td>
+            </tr>
+            <tr>
+              <td>READ_CONTACTS / CALL_LOG / SMS</td>
+              <td><span class="status-chip chip-denied">&#10005; Not declared</span></td>
+              <td style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary);">DockDrop doesn&rsquo;t back up contacts, call logs, SMS, or app data. Never.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:16px; font-size:13px; color:var(--text-tertiary); text-align:right;">
+        Verify yourself: Settings &rarr; Apps &rarr; DockDrop &rarr; Permissions
+      </p>
+    </div>
+  </section>
+
+  <!-- What DockDrop reads -->
+  <section class="section">
+    <div class="container">
+      <div class="how-layout" style="gap:60px; align-items:flex-start;">
+        <div>
+          <div class="section-label">What DockDrop reads</div>
+          <h2 class="section-title" style="margin-bottom:20px">Exactly what you grant.<br />Nothing more.</h2>
+          <p>DockDrop uses Android&rsquo;s Storage Access Framework (SAF). You open a system folder picker and select each source folder. DockDrop can only read files within those exact trees &mdash; not your entire storage, not system files, not other apps&rsquo; private data.</p>
+          <p style="margin-top:12px">Folders DockDrop can back up (with your permission):</p>
+          <ul style="margin-top:12px; display:flex; flex-direction:column; gap:8px; padding-left:0; list-style:none;">
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(79,140,255,0.06); border:1px solid rgba(79,140,255,0.15);">
+              <span style="color:var(--seal);">&#10003;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">DCIM/Camera</span>
+            </li>
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(79,140,255,0.06); border:1px solid rgba(79,140,255,0.15);">
+              <span style="color:var(--seal);">&#10003;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">Pictures/</span>
+            </li>
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(79,140,255,0.06); border:1px solid rgba(79,140,255,0.15);">
+              <span style="color:var(--seal);">&#10003;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">Documents/</span>
+            </li>
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(79,140,255,0.06); border:1px solid rgba(79,140,255,0.15);">
+              <span style="color:var(--seal);">&#10003;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">Android/media/com.whatsapp/WhatsApp/Media</span>
+            </li>
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(251,113,133,0.06); border:1px solid rgba(251,113,133,0.15);">
+              <span style="color:var(--danger);">&#10005;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">WhatsApp chat databases (private app data &mdash; Android blocks this)</span>
+            </li>
+            <li class="privacy-badge" style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; background:rgba(251,113,133,0.06); border:1px solid rgba(251,113,133,0.15);">
+              <span style="color:var(--danger);">&#10005;</span>
+              <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-secondary);">Any other app&rsquo;s private data (Android/data/ &mdash; blocked by OS)</span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <div class="section-label">What DockDrop stores</div>
+          <h2 class="section-title" style="margin-bottom:20px">On your SSD only.</h2>
+          <p>DockDrop stores all data on the SSD you chose. The only thing stored on your phone is the Room database (an index of what&rsquo;s been backed up, for fast diffing) and the persisted SAF tree permission URIs.</p>
+          <p style="margin-top:12px">On your SSD, DockDrop creates:</p>
+          <div class="glass-card" style="padding:20px 24px; margin-top:16px;">
+            <pre style="font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); white-space:pre-wrap; line-height:1.8;">DockDrop/
+  .dockdrop/
+    drive.json          &larr; drive ID, created date
+    sets/&lt;setId&gt;/
+      HEAD              &larr; current generation number
+      manifest.N.ndjson &larr; file index (path, size, hash)
+      manifest.N.sha256 &larr; manifest checksum
+  &lt;SetName&gt;/
+    &lt;SourceFolder&gt;/
+      ...files as-is...
+  _deleted/
+    &lt;SetName&gt;/&lt;date&gt;/   &larr; kept deletions</pre>
+          </div>
+          <p style="margin-top:12px; font-size:13px; color:var(--text-tertiary);">No database files, no temp files, no hidden cloud sync. Everything is human-readable.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Enforcement -->
+  <section class="section">
+    <div class="container" style="max-width:760px;">
+      <div class="section-label">Enforcement</div>
+      <h2 class="section-title" style="margin-bottom:16px">How we keep the promise</h2>
+      <p class="section-sub" style="margin-bottom:40px;">Offline-first isn&rsquo;t just policy &mdash; it&rsquo;s checked automatically on every build.</p>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="glass-card reveal" style="padding:24px 28px; display:flex; align-items:flex-start; gap:16px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:var(--seal); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">&#10003;</div>
+          <div>
+            <strong style="color:var(--text-primary); font-size:15px;">CI manifest lint rule</strong>
+            <p style="margin-top:4px; font-size:14px;">Every GitHub Actions build runs a lint rule (A8 Quality Agent) that scans the merged manifest for <code>INTERNET</code> or <code>ACCESS_NETWORK_STATE</code>. If found, the build fails and cannot be merged.</p>
+          </div>
+        </div>
+        <div class="glass-card reveal" style="padding:24px 28px; display:flex; align-items:flex-start; gap:16px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:var(--seal); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">&#10003;</div>
+          <div>
+            <strong style="color:var(--text-primary); font-size:15px;">Open source</strong>
+            <p style="margin-top:4px; font-size:14px;">DockDrop is open source. You can read <a href="https://github.com/i-soumya18/DockDrop">every line of code</a> and the AndroidManifest.xml. The CI workflow is public. Trust, but verify.</p>
+          </div>
+        </div>
+        <div class="glass-card reveal" style="padding:24px 28px; display:flex; align-items:flex-start; gap:16px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:var(--seal); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">&#10003;</div>
+          <div>
+            <strong style="color:var(--text-primary); font-size:15px;">Verifiable on your device</strong>
+            <p style="margin-top:4px; font-size:14px;">Settings &rarr; Apps &rarr; DockDrop &rarr; Permissions. Android shows every permission the app has. No network access listed means no network access possible &mdash; the OS enforces it.</p>
+          </div>
+        </div>
+        <div class="glass-card reveal" style="padding:24px 28px; display:flex; align-items:flex-start; gap:16px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); color:var(--seal); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">&#10003;</div>
+          <div>
+            <strong style="color:var(--text-primary); font-size:15px;">Bundled assets, no runtime downloads</strong>
+            <p style="margin-top:4px; font-size:14px;">Fonts (Manrope, Inter, JetBrains Mono) are bundled in the APK. No remote config. No runtime font downloads. The app works exactly as reviewed &mdash; forever, without internet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Soumya Ranjan Sahoo &middot; <a href="index.html">DockDrop</a> &middot; <a href="https://github.com/i-soumya18/DockDrop/blob/main/LICENSE">Apache 2.0</a></p>
+        <div class="footer-trust-chip">&#128274; Offline by design. Network permission: none.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

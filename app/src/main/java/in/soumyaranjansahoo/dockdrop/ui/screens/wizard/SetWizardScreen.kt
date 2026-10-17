@@ -47,13 +47,22 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -78,10 +87,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
@@ -97,25 +114,155 @@ import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.screens.crypto.EncryptionSetupScreen
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockColors
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSheet
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+enum class FolderCategory {
+    PHOTO,
+    VIDEO,
+    DOCUMENT,
+    AUDIO,
+    OTHER;
+
+    fun color(colors: DockColors): Color = when (this) {
+        PHOTO -> colors.categoryPhoto
+        VIDEO -> colors.categoryVideo
+        DOCUMENT -> colors.categoryDocument
+        AUDIO -> colors.categoryAudio
+        OTHER -> colors.categoryOther
+    }
+}
+
 data class FolderSuggestion(
     val label: String,
     val description: String,
     val icon: ImageVector,
-    val iconColor: Color,
+    val category: FolderCategory = FolderCategory.OTHER,
     var grantedUri: Uri? = null,
     var isSelected: Boolean = false,
     val isCustom: Boolean = false,
     val id: String = UUID.randomUUID().toString()
-)
+) {
+    fun iconColor(colors: DockColors): Color = category.color(colors)
+}
+
+/**
+ * Hardware-grade SSD write benchmark radar glyph adhering to Rule 8 & DESIGN.md §5.2.8.
+ * Replaces generic CircularProgressIndicator with a state-aware disk sector pulse.
+ */
+@Composable
+fun BenchmarkRadarGlyph(
+    modifier: Modifier = Modifier,
+    size: Dp = 28.dp
+) {
+    val colors = DockTheme.colors
+    val isReducedMotion = LocalReducedMotion.current
+
+    val infiniteTransition = rememberInfiniteTransition(label = "BenchmarkRadarTransition")
+
+    // Sweep scan line (360° continuous rotation)
+    val animatedSweepAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "radarSweepAngle"
+    )
+
+    // Breathe pulse wave expansion (2400ms per DESIGN.md §5.1)
+    val animatedPulseProgress by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "radarPulseProgress"
+    )
+
+    val animatedBreatheAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.90f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "radarBreatheAlpha"
+    )
+
+    val sweepAngle = if (isReducedMotion) 45f else animatedSweepAngle
+    val pulseProgress = if (isReducedMotion) 0.5f else animatedPulseProgress
+    val breatheAlpha = if (isReducedMotion) 0.75f else animatedBreatheAlpha
+
+    Canvas(
+        modifier = modifier
+            .size(size)
+            .semantics {
+                contentDescription = "Benchmarking SSD write throughput"
+                liveRegion = LiveRegionMode.Polite
+            }
+    ) {
+        val center = Offset(this.size.width / 2f, this.size.height / 2f)
+        val maxRadius = this.size.minDimension / 2f
+
+        // 1. Concentric radar range rings (hardware disk tracks)
+        drawCircle(
+            color = colors.dock.copy(alpha = 0.18f * breatheAlpha),
+            radius = maxRadius * 0.95f,
+            center = center,
+            style = Stroke(width = 1.2.dp.toPx())
+        )
+        drawCircle(
+            color = colors.dock.copy(alpha = 0.25f * breatheAlpha),
+            radius = maxRadius * 0.60f,
+            center = center,
+            style = Stroke(width = 1.dp.toPx())
+        )
+
+        if (!isReducedMotion) {
+            // 2. Expanding pulse wave (data packets landing on disk)
+            val pulseRadius = maxRadius * pulseProgress
+            val pulseAlpha = ((1f - pulseProgress) * 0.45f).coerceIn(0f, 1f)
+            drawCircle(
+                color = colors.dock.copy(alpha = pulseAlpha),
+                radius = pulseRadius,
+                center = center,
+                style = Stroke(width = 1.5.dp.toPx())
+            )
+
+            // 3. Rotating radar sweep line with trailing gradient arc
+            val sweepRad = Math.toRadians(sweepAngle.toDouble())
+            val lineEnd = Offset(
+                x = center.x + (maxRadius * 0.95f * Math.cos(sweepRad)).toFloat(),
+                y = center.y + (maxRadius * 0.95f * Math.sin(sweepRad)).toFloat()
+            )
+            drawLine(
+                color = colors.dock.copy(alpha = 0.85f),
+                start = center,
+                end = lineEnd,
+                strokeWidth = 1.5.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+
+        // 4. Center spindle / write-head pip
+        drawCircle(
+            color = colors.dock,
+            radius = 2.5.dp.toPx(),
+            center = center
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,49 +288,49 @@ fun SetWizardScreen(
                 label = "Camera",
                 description = "Photos & Videos in DCIM/Camera",
                 icon = Icons.Outlined.PhotoCamera,
-                iconColor = Color(0xFF2563EB),
+                category = FolderCategory.PHOTO,
                 isSelected = true
             ),
             FolderSuggestion(
                 label = "Pictures",
                 description = "Screenshots and saved pictures",
                 icon = Icons.Outlined.Image,
-                iconColor = Color(0xFF6366F1),
+                category = FolderCategory.PHOTO,
                 isSelected = true
             ),
             FolderSuggestion(
                 label = "Downloads",
                 description = "Downloaded files, PDFs & installers",
                 icon = Icons.Outlined.Download,
-                iconColor = Color(0xFF0284C7),
+                category = FolderCategory.OTHER,
                 isSelected = false
             ),
             FolderSuggestion(
                 label = "Documents",
                 description = "Local documents and PDFs",
                 icon = Icons.Outlined.Description,
-                iconColor = Color(0xFF059669),
+                category = FolderCategory.DOCUMENT,
                 isSelected = false
             ),
             FolderSuggestion(
                 label = "Music & Audio",
                 description = "Music, podcasts & voice recordings",
                 icon = Icons.Outlined.AudioFile,
-                iconColor = Color(0xFFD97706),
+                category = FolderCategory.AUDIO,
                 isSelected = false
             ),
             FolderSuggestion(
                 label = "Movies & Videos",
                 description = "Recorded videos & screen captures",
                 icon = Icons.Outlined.Videocam,
-                iconColor = Color(0xFF7C3AED),
+                category = FolderCategory.VIDEO,
                 isSelected = false
             ),
             FolderSuggestion(
                 label = "WhatsApp Media",
                 description = "Received photos, videos & notes",
                 icon = Icons.AutoMirrored.Outlined.Chat,
-                iconColor = Color(0xFF10B981),
+                category = FolderCategory.OTHER,
                 isSelected = false
             )
         )
@@ -384,7 +531,7 @@ fun SetWizardScreen(
                                 label = name,
                                 description = "Custom directory · Access granted",
                                 icon = Icons.Outlined.FolderOpen,
-                                iconColor = Color(0xFF0EA5E9),
+                                category = FolderCategory.OTHER,
                                 grantedUri = pendingCustomUri,
                                 isSelected = true,
                                 isCustom = true
@@ -722,8 +869,8 @@ fun SetWizardScreen(
                                 }
                             },
                             icon = suggestion.icon,
-                            iconBgColor = suggestion.iconColor.copy(alpha = 0.12f),
-                            iconTintColor = suggestion.iconColor,
+                            iconBgColor = suggestion.iconColor(colors).copy(alpha = 0.12f),
+                            iconTintColor = suggestion.iconColor(colors),
                             trailingBadge = if (isGranted) "Granted ✓" else "Tap to Grant",
                             modifier = Modifier.padding(vertical = 5.dp)
                         )
@@ -742,6 +889,7 @@ fun SetWizardScreen(
 
                         items(customFolders.size) { index ->
                             val custom = customFolders[index]
+                            val customColor = custom.iconColor(colors)
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -767,13 +915,13 @@ fun SetWizardScreen(
                                         modifier = Modifier
                                             .size(42.dp)
                                             .clip(RoundedCornerShape(12.dp))
-                                            .background(custom.iconColor.copy(alpha = 0.12f)),
+                                            .background(customColor.copy(alpha = 0.12f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = custom.icon,
                                             contentDescription = null,
-                                            tint = custom.iconColor,
+                                            tint = customColor,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -807,13 +955,15 @@ fun SetWizardScreen(
 
                                     IconButton(
                                         onClick = { customFolders.removeAt(index) },
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .semantics { contentDescription = "Remove custom folder ${custom.label}" }
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Delete,
-                                            contentDescription = "Remove folder",
+                                            contentDescription = null,
                                             tint = colors.textTertiary,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
@@ -835,7 +985,7 @@ fun SetWizardScreen(
                                 )
                                 .clickable { customFolderPickerLauncher.launch(null) },
                             colors = CardDefaults.cardColors(
-                                containerColor = if (colors.isDark) Color(0xFF131D31) else Color(0xFFF0F7FF)
+                                containerColor = colors.surfaceRaised
                             )
                         ) {
                             Row(
@@ -979,6 +1129,7 @@ fun SetWizardScreen(
                                     )
                                     OutlinedButton(
                                         onClick = { vaultPickerLauncher.launch(null) },
+                                        modifier = Modifier.heightIn(min = 48.dp),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text(if (vaultTreeUri != null) "Change" else "Choose")
@@ -987,47 +1138,79 @@ fun SetWizardScreen(
 
                                 if (isTestingWrite) {
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
+                                    Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(colors.dock.copy(alpha = 0.08f))
-                                            .padding(12.dp)
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .border(1.dp, colors.dock.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                                        colors = CardDefaults.cardColors(containerColor = colors.surfaceRaised)
                                     ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(16.dp),
-                                            color = colors.dock,
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            "Benchmarking SSD write throughput…",
-                                            style = DockBodySmall,
-                                            color = colors.dock
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp)
+                                        ) {
+                                            BenchmarkRadarGlyph(size = 32.dp)
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Benchmarking SSD write throughput…",
+                                                    style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                                    color = colors.dock
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Writing 8 MB test block to verify speed & permissions",
+                                                    style = DockBodySmall.copy(fontSize = 12.sp),
+                                                    color = colors.textSecondary
+                                                )
+                                            }
+                                        }
                                     }
                                 } else if (vaultTreeUri != null) {
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
+                                    Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(colors.seal.copy(alpha = 0.08f))
-                                            .padding(12.dp)
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .border(1.dp, colors.seal.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                                        colors = CardDefaults.cardColors(containerColor = colors.surfaceRaised)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.CheckCircle,
-                                            contentDescription = null,
-                                            tint = colors.seal,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "Write benchmark passed: ${String.format("%.1f", writeSpeedMbS)} MB/s",
-                                            style = DockMono.copy(color = colors.seal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(14.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .clip(CircleShape)
+                                                    .background(colors.seal.copy(alpha = 0.14f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = colors.seal,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Write Benchmark Passed",
+                                                    style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 14.sp),
+                                                    color = colors.textPrimary
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "${String.format(java.util.Locale.US, "%.1f", writeSpeedMbS)} MB/s throughput · Write verified",
+                                                    style = DockMono.copy(color = colors.sealText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1076,8 +1259,8 @@ fun SetWizardScreen(
                                 mirrorConfirmed = false
                             },
                             icon = Icons.Outlined.Folder,
-                            iconBgColor = Color(0xFF6366F1).copy(alpha = 0.12f),
-                            iconTintColor = Color(0xFF6366F1),
+                            iconBgColor = colors.dock.copy(alpha = 0.12f),
+                            iconTintColor = colors.dock,
                             isRadio = true
                         )
 
@@ -1093,13 +1276,16 @@ fun SetWizardScreen(
                                     val isSel = retentionDays == days
                                     OutlinedButton(
                                         onClick = { retentionDays = days },
+                                        modifier = Modifier
+                                            .heightIn(min = 48.dp)
+                                            .defaultMinSize(minWidth = 72.dp),
                                         colors = if (isSel) ButtonDefaults.buttonColors(
                                             containerColor = colors.dock,
                                             contentColor = colors.onDock
                                         ) else ButtonDefaults.outlinedButtonColors(),
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("$days days", style = DockMono.copy(fontSize = 12.sp))
+                                        Text("$days days", style = DockMono.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
                                     }
                                 }
                             }
@@ -1236,23 +1422,37 @@ fun SetWizardScreen(
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(14.dp))
-                                Row(
+                                Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    listOf(15, 20, 30, 100).forEach { pct ->
-                                        val sel = minBatteryPct == pct
-                                        val label = if (pct == 100) "Charging only" else "$pct%"
-                                        OutlinedButton(
-                                            onClick = { minBatteryPct = pct },
-                                            modifier = Modifier.weight(1f),
-                                            colors = if (sel) ButtonDefaults.buttonColors(
-                                                containerColor = colors.dock,
-                                                contentColor = colors.onDock
-                                            ) else ButtonDefaults.outlinedButtonColors(),
-                                            shape = RoundedCornerShape(10.dp)
+                                    val batteryOptions = listOf(15 to "15%", 20 to "20%", 30 to "30%", 100 to "Charging only")
+                                    batteryOptions.chunked(2).forEach { rowOptions ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Text(label, style = DockMono.copy(fontSize = 12.sp))
+                                            rowOptions.forEach { (pct, label) ->
+                                                val sel = minBatteryPct == pct
+                                                OutlinedButton(
+                                                    onClick = { minBatteryPct = pct },
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .heightIn(min = 48.dp),
+                                                    colors = if (sel) ButtonDefaults.buttonColors(
+                                                        containerColor = colors.dock,
+                                                        contentColor = colors.onDock
+                                                    ) else ButtonDefaults.outlinedButtonColors(),
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    border = if (sel) null else androidx.compose.foundation.BorderStroke(1.dp, colors.outline.copy(alpha = 0.5f))
+                                                ) {
+                                                    Text(
+                                                        text = label,
+                                                        style = DockMono.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }

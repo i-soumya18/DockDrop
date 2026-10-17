@@ -30,9 +30,12 @@ Dark-first (default follows system; both themes ship).
 | `textTertiary` | `#66738F` | Hints, disabled |
 | `dock` (primary) | `#4F8CFF` | Primary actions, progress, the Dock glyph |
 | `onDock` | `#06122B` | Text/icons on primary |
-| `seal` | `#34D399` | Verified/Sealed only (see rule below) |
-| `attention` | `#FBBF24` | Needs the user, paused, warnings |
+| `seal` / `sealText` | `#34D399` / `#34D399` | Verified/Sealed only (see rule below) |
+| `attention` / `attentionText` | `#FBBF24` / `#FBBF24` | Needs the user, paused, warnings |
 | `danger` | `#FB7185` | Destructive: Mirror mode, overwrite, delete |
+| `badgeBg` / `badgeBorder` / `badgeContent` | `#0D4327` / `#0F5B34` / `#86EFAC` | Offline privacy badge surfaces & text |
+| `categoryPhoto` / `Video` / `Document` / `Audio` / `Other` | `#4F8CFF` / `#A78BFA` / `#2DD4BF` / `#FBBF24` / `#9AA7C0` | File category chips & Drop particles |
+| `strengthWeak` / `Medium` / `Strong` | `danger` / `attention` / `seal` | Passphrase entropy meter |
 
 ### Light
 | Token | Hex |
@@ -43,17 +46,21 @@ Dark-first (default follows system; both themes ship).
 | `outline` | `#D5DCEB` |
 | `textPrimary` | `#0F172A` |
 | `textSecondary` | `#475569` |
-| `dock` | `#2F6BEA` |
+| `textTertiary` | `#94A3B8` |
+| `dock` / `onDock` | `#2F6BEA` / `#FFFFFF` |
 | `seal` (fill) / `sealText` | `#10B981` / `#047857` |
 | `attention` (fill) / `attentionText` | `#F59E0B` / `#B45309` |
 | `danger` | `#E11D48` |
+| `badgeBg` / `badgeBorder` / `badgeContent` | `#DCFCE7` / `#BBF7D0` / `#047857` |
+| `categoryPhoto` / `Video` / `Document` / `Audio` / `Other` | `#2F6BEA` / `#7C3AED` / `#059669` / `#D97706` / `#64748B` |
+| `strengthWeak` / `Medium` / `Strong` | `danger` / `attentionText` / `sealText` |
 
 ### Rules
 - **Green is earned.** `seal` appears only after verification passes. Never use it for "done copying", never for decoration. This is the visual half of CLAUDE.md Rule 2.
 - **Amber means "you can fix this"**, red means "this can lose data". Never swap them.
 - One accent (`dock`) per screen region. Large color fills are reserved for the hero Dock and the Seal moment.
 - **Drop particle tints** (data-driven, subtle, 70% alpha): photos `#4F8CFF`, videos `#A78BFA`, documents `#2DD4BF`, other `#9AA7C0`.
-- Text on colored fills uses the `on*` token; verify 4.5:1 in both themes.
+- Text on colored fills uses the `on*` token; verify 4.5:1 in both themes. Use `sealText` and `attentionText` when rendering semantic text on `bg`/`surface` so light-mode contrast exceeds 4.8:1 WCAG AA.
 
 ## 3. Typography (bundled fonts only; the app has no network)
 

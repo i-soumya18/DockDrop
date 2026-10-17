@@ -123,6 +123,7 @@ class DockDropTileService : TileService() {
         tile.updateTile()
     }
 
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
         val intent = Intent(this, MainActivity::class.java).apply {

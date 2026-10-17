@@ -7,6 +7,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,9 +61,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,8 +79,14 @@ import `in`.soumyaranjansahoo.dockdrop.ui.components.DockBottomBar
 import `in`.soumyaranjansahoo.dockdrop.ui.navigation.Routes
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockLabel
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSheet
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -104,7 +115,7 @@ fun SettingsScreen(
     val appVersion = remember {
         try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "1.0.1"
         }
     }
@@ -133,9 +144,9 @@ fun SettingsScreen(
                             os.write(logContent.toByteArray())
                         }
                     }
-                    Toast.makeText(context, "Diagnostic log exported successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Diagnostic log exported", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Failed to export log: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -160,15 +171,13 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header: Large "Settings" title matching mockup
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Settings",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                style = DockHeadline,
                 color = colors.textPrimary
             )
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // 1. BACKUP SECTION
             SectionCaption(title = "BACKUP")
@@ -176,89 +185,99 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(RadiusMd))
+                    .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Default battery condition",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = DockBody.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                         color = colors.textPrimary
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "New Sets require battery to be above this level before starting.",
-                        fontSize = 13.sp,
-                        color = colors.textSecondary,
-                        lineHeight = 18.sp
+                        style = DockBodySmall,
+                        color = colors.textSecondary
                     )
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Battery selector pills
+                    // Battery selector pills (>=48dp touch targets + radio semantics)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(15 to "15%", 20 to "20%", 30 to "30%", 100 to "Charging").forEach { (pct, label) ->
-                            val selected = defaultBatteryPct == pct
+                            val isSelected = defaultBatteryPct == pct
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (selected) colors.dock else colors.surfaceRaised)
+                                    .heightIn(min = 48.dp)
+                                    .clip(RoundedCornerShape(RadiusSm))
+                                    .background(if (isSelected) colors.dock else colors.surfaceRaised)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) colors.dock else colors.outline.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(RadiusSm)
+                                    )
+                                    .semantics {
+                                        role = Role.RadioButton
+                                        selected = isSelected
+                                    }
                                     .clickable { appPreferences.setDefaultMinBatteryPct(pct) }
-                                    .padding(vertical = 10.dp),
+                                    .padding(horizontal = 6.dp, vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = label,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (selected) colors.onDock else colors.textPrimary
+                                    style = DockMono.copy(
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = if (isSelected) colors.onDock else colors.textPrimary
                                 )
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.6f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     SettingsItemRow(
                         icon = Icons.Outlined.Description,
                         title = "Backup history",
-                        subtitle = "View Receipts from all past backups",
+                        subtitle = "View cryptographic receipts from past Drops",
                         onClick = onNavigateToHistory
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.6f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     SettingsItemRow(
                         icon = Icons.Outlined.Notifications,
                         title = "Notification settings",
-                        subtitle = "Configure system alerts for progress and sealed backups",
+                        subtitle = "System alerts for progress and sealed backups",
                         onClick = { openAppNotificationSettings(context) }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.6f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     SettingsItemRow(
                         icon = Icons.Outlined.BatteryChargingFull,
                         title = "Background setup",
-                        subtitle = "Keep backups alive when screen is locked & exempt from battery saver",
+                        subtitle = "Keep Drops alive when screen locks",
                         onClick = onNavigateToKeepAlive
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 2. APPEARANCE SECTION
             SectionCaption(title = "APPEARANCE")
@@ -266,21 +285,20 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(RadiusMd))
+                    .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Theme",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = DockBody.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                         color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Theme selector pills
+                    // Theme selector pills (>=48dp touch targets + radio semantics)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -290,48 +308,60 @@ fun SettingsScreen(
                             ThemeMode.DARK to "Dark",
                             ThemeMode.LIGHT to "Light"
                         ).forEach { (mode, label) ->
-                            val selected = currentTheme == mode
+                            val isSelected = currentTheme == mode
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (selected) colors.dock else colors.surfaceRaised)
+                                    .heightIn(min = 48.dp)
+                                    .clip(RoundedCornerShape(RadiusSm))
+                                    .background(if (isSelected) colors.dock else colors.surfaceRaised)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) colors.dock else colors.outline.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(RadiusSm)
+                                    )
+                                    .semantics {
+                                        role = Role.RadioButton
+                                        selected = isSelected
+                                    }
                                     .clickable { appPreferences.setThemeMode(mode) }
-                                    .padding(vertical = 10.dp),
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = label,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (selected) colors.onDock else colors.textPrimary
+                                    style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = if (isSelected) colors.onDock else colors.textPrimary
                                 )
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.6f), thickness = 1.dp)
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(RadiusSm))
+                            .clickable { appPreferences.setReduceMotion(!isReduceMotion) }
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Reduce motion",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = DockBody.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Replaces particle streams and bounces with calm static indicators.",
-                                fontSize = 13.sp,
-                                color = colors.textSecondary,
-                                lineHeight = 18.sp
+                                text = "Replaces particle streams and springs with calm static indicators.",
+                                style = DockBodySmall,
+                                color = colors.textSecondary
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
@@ -339,17 +369,18 @@ fun SettingsScreen(
                             checked = isReduceMotion,
                             onCheckedChange = { appPreferences.setReduceMotion(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = colors.surface,
                                 checkedTrackColor = colors.dock,
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = colors.outline
+                                uncheckedThumbColor = colors.textSecondary,
+                                uncheckedTrackColor = colors.surfaceRaised,
+                                uncheckedBorderColor = colors.outline
                             )
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 3. STORAGE SECTION
             SectionCaption(title = "STORAGE")
@@ -357,52 +388,45 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(RadiusMd))
+                    .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsItemRow(
                         icon = Icons.Outlined.Storage,
                         title = "Manage Docks",
-                        subtitle = "View connected drives and storage details",
+                        subtitle = "View configured drives and release permissions",
                         onClick = { showManageDocksSheet = true }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.6f), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     SettingsItemRow(
                         icon = Icons.Outlined.Folder,
-                        title = "Default Vault location",
-                        subtitle = "DockDrop/ on your SSD",
+                        title = "Default vault location",
+                        subtitle = "DockDrop/ on your USB-C SSD",
                         onClick = { showManageDocksSheet = true }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // 4. PRIVACY SECTION (Adaptive emerald card matching theme)
+            // 4. PRIVACY SECTION (Uses semantic badgeBg, badgeBorder, badgeContent tokens)
             SectionCaption(title = "PRIVACY")
-
-            val isDark = colors.isDark
-            val privacyCardBg = if (isDark) Color(0xFF042414) else Color(0xFFF0FDF4)
-            val privacyBorder = if (isDark) Color(0xFF0F5B34) else Color(0xFFBBF7D0)
-            val privacyIconBg = if (isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)
-            val privacyText = if (isDark) Color(0xFF86EFAC) else Color(0xFF15803D)
-            val privacySubtext = if (isDark) Color(0xFF4ADE80) else Color(0xFF166534)
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, privacyBorder, RoundedCornerShape(16.dp))
-                    .clickable { showHowToCheckSheet = true },
-                colors = CardDefaults.cardColors(containerColor = privacyCardBg),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                    .clip(RoundedCornerShape(RadiusMd))
+                    .border(1.dp, colors.badgeBorder, RoundedCornerShape(RadiusMd))
+                    .clickable(role = Role.Button) { showHowToCheckSheet = true },
+                colors = CardDefaults.cardColors(containerColor = colors.badgeBg),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -412,15 +436,15 @@ fun SettingsScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
-                            .background(privacyIconBg),
+                            .background(colors.badgeBorder.copy(alpha = 0.45f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = privacyText,
+                            tint = colors.badgeContent,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -429,23 +453,30 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Offline by design. Network permission: none",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = privacyText
+                            text = "Offline by design · Network permission: none",
+                            style = DockBodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = colors.badgeContent
                         )
-                        Spacer(modifier = Modifier.height(3.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "DockDrop does not request internet access. Your files never leave your phone and your drive.",
-                            fontSize = 12.sp,
-                            color = privacySubtext,
-                            lineHeight = 17.sp
+                            text = "DockDrop does not request internet access. Tap to verify in Android Settings.",
+                            style = DockBodySmall.copy(fontSize = 12.sp),
+                            color = colors.badgeContent.copy(alpha = 0.9f)
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = colors.badgeContent,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 5. ABOUT SECTION
             SectionCaption(title = "ABOUT")
@@ -453,16 +484,16 @@ fun SettingsScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(RadiusMd))
+                    .border(1.dp, colors.outline, RoundedCornerShape(RadiusMd)),
                 colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsItemRow(
                         icon = Icons.Outlined.Info,
-                        title = "App version",
-                        subtitle = appVersion,
+                        title = "App version & diagnostics",
+                        subtitle = "v$appVersion · Export support log",
                         onClick = { showAboutSheet = true }
                     )
                 }
@@ -477,11 +508,12 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { showHowToCheckSheet = false },
             containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -489,27 +521,27 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(if (colors.isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)),
+                            .background(colors.badgeBg)
+                            .border(1.dp, colors.badgeBorder, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = if (colors.isDark) Color(0xFF86EFAC) else Color(0xFF15803D),
-                            modifier = Modifier.size(24.dp)
+                            tint = colors.badgeContent,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
                             text = "Verify zero network access",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = DockTitle,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "In Android Settings",
-                            fontSize = 13.sp,
+                            text = "In Android system settings",
+                            style = DockBodySmall,
                             color = colors.textSecondary
                         )
                     }
@@ -521,23 +553,21 @@ fun SettingsScreen(
                     "Open Android Settings → Apps → DockDrop.",
                     "Tap \"Permissions\". Notice \"Network\" or \"Internet\" does not appear.",
                     "Tap \"Mobile data & Wi-Fi\". Data usage shows 0 B used.",
-                    "DockDrop does not include internet permissions in its manifest."
+                    "DockDrop's manifest is verified at build time to contain zero network permissions."
                 )
 
                 steps.forEachIndexed { i, step ->
                     Row(modifier = Modifier.padding(vertical = 4.dp)) {
                         Text(
                             text = "${i + 1}.",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = DockMono.copy(fontWeight = FontWeight.Bold),
                             color = colors.dock
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = step,
-                            fontSize = 14.sp,
-                            color = colors.textSecondary,
-                            lineHeight = 20.sp
+                            style = DockBodySmall,
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -551,11 +581,19 @@ fun SettingsScreen(
                         }
                         context.startActivity(intent)
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(RadiusSm),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
                 ) {
-                    Text("Open Android App Info", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Open Android App Info",
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -568,47 +606,46 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { showManageDocksSheet = false },
             containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
                 Text(
                     text = "Storage & Connected Docks",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = DockTitle,
                     color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Default vault: DockDrop/ on your USB-C SSD",
-                    fontSize = 13.sp,
-                    color = colors.textSecondary
+                    text = "Default vault path: DockDrop/ on your USB-C SSD",
+                    style = DockMono.copy(color = colors.textSecondary)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (sets.isNotEmpty()) {
                     Text(
-                        text = "Configured Sets (${sets.size}):",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "Configured Sets (${sets.size})",
+                        style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
                         color = colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     sets.forEach { s ->
                         Text(
                             text = "• ${s.name} (${s.dockUserLabel})",
-                            fontSize = 13.sp,
-                            color = colors.textSecondary
+                            style = DockBodySmall,
+                            color = colors.textSecondary,
+                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 } else {
                     Text(
                         text = "No Sets configured yet.",
-                        fontSize = 13.sp,
+                        style = DockBodySmall,
                         color = colors.textSecondary
                     )
                 }
@@ -620,11 +657,17 @@ fun SettingsScreen(
                         showManageDocksSheet = false
                         showForgetConfirmDialog = true
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.danger)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(RadiusSm),
+                    border = BorderStroke(1.dp, colors.danger)
                 ) {
-                    Text("Forget this SSD", color = colors.danger, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Forget this SSD",
+                        color = colors.danger,
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -637,33 +680,31 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { showAboutSheet = false },
             containerColor = colors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
                 Text(
                     text = "About DockDrop",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = DockTitle,
                     color = colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Version 1.0.0 · Offline by design",
-                    fontSize = 14.sp,
-                    color = colors.textSecondary
+                    text = "Version $appVersion · Offline by design",
+                    style = DockMono.copy(color = colors.textSecondary)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "DockDrop lets you back up your phone directly to an external USB-C drive you own with zero network permissions, bit-level verification, and open formats.",
-                    fontSize = 14.sp,
-                    color = colors.textSecondary,
-                    lineHeight = 20.sp
+                    text = "DockDrop backs up your phone directly to an external USB-C drive you own with zero network permissions, SHA-256 verification, and open formats.",
+                    style = DockBodySmall,
+                    color = colors.textSecondary
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -673,11 +714,19 @@ fun SettingsScreen(
                         showAboutSheet = false
                         exportLogLauncher.launch("dockdrop-diagnostic-log.txt")
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(RadiusSm),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
                 ) {
-                    Text("Export diagnostic log", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Export diagnostic log",
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -687,10 +736,17 @@ fun SettingsScreen(
                         showAboutSheet = false
                         onNavigateToKeepAlive()
                     },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp),
+                    shape = RoundedCornerShape(RadiusSm),
+                    border = BorderStroke(1.dp, colors.outline)
                 ) {
-                    Text("Screen-off setup guide", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Screen-off setup guide",
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.textPrimary
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -702,10 +758,18 @@ fun SettingsScreen(
     if (showForgetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showForgetConfirmDialog = false },
-            title = { Text("Forget this SSD?", fontWeight = FontWeight.Bold) },
+            containerColor = colors.surface,
+            title = {
+                Text(
+                    text = "Forget this SSD?",
+                    style = DockTitle,
+                    color = colors.textPrimary
+                )
+            },
             text = {
                 Text(
-                    "This removes all saved Sets and folder permissions on this phone. Files on the SSD will NOT be deleted.",
+                    text = "This removes all saved Sets and folder permissions on this phone. Files on your SSD are never deleted.",
+                    style = DockBodySmall,
                     color = colors.textSecondary
                 )
             },
@@ -732,14 +796,28 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.danger)
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.danger,
+                        contentColor = colors.surface
+                    )
                 ) {
-                    Text("Forget", color = Color.White)
+                    Text(
+                        text = "Forget",
+                        style = DockBodySmall.copy(fontWeight = FontWeight.Bold)
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showForgetConfirmDialog = false }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = { showForgetConfirmDialog = false },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.textSecondary
+                    )
                 }
             }
         )
@@ -751,10 +829,8 @@ private fun SectionCaption(title: String) {
     val colors = DockTheme.colors
     Text(
         text = title,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
+        style = DockLabel,
         color = colors.textSecondary,
-        letterSpacing = 0.5.sp,
         modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
     )
 }
@@ -771,8 +847,10 @@ private fun SettingsItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 4.dp),
+            .heightIn(min = 52.dp)
+            .clip(RoundedCornerShape(RadiusSm))
+            .clickable(role = Role.Button) { onClick() }
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -787,17 +865,18 @@ private fun SettingsItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
+                style = DockBody.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
                 color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                fontSize = 13.sp,
+                style = DockBodySmall,
                 color = colors.textSecondary
             )
         }
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Icon(
             imageVector = Icons.Default.ChevronRight,

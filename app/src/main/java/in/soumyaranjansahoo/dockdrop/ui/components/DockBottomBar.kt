@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,10 +79,10 @@ fun DockBottomBar(
             .background(colors.surface)
             .navigationBarsPadding()
     ) {
-        // Ultra-fine hairline divider matching Material 3 spec
+        // 1dp divider matching design spec
         HorizontalDivider(
             color = colors.outline.copy(alpha = 0.45f),
-            thickness = 0.75.dp
+            thickness = 1.dp
         )
 
         Row(
@@ -94,12 +93,11 @@ fun DockBottomBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GoogleNavItem(
+            DockNavItem(
                 label = "Home",
                 selected = currentRoute == Routes.HOME,
                 selectedIcon = Icons.Filled.Home,
                 unselectedIcon = Icons.Outlined.Home,
-                rotationDegrees = 0f,
                 hasBadge = hasHomeBadge,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -108,12 +106,11 @@ fun DockBottomBar(
                 modifier = Modifier.weight(1f)
             )
 
-            GoogleNavItem(
+            DockNavItem(
                 label = "Restore",
                 selected = currentRoute == Routes.RESTORE_HUB,
                 selectedIcon = Icons.Outlined.History,
                 unselectedIcon = Icons.Outlined.History,
-                rotationDegrees = -45f,
                 hasBadge = hasRestoreBadge,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -122,12 +119,11 @@ fun DockBottomBar(
                 modifier = Modifier.weight(1f)
             )
 
-            GoogleNavItem(
+            DockNavItem(
                 label = "Settings",
                 selected = currentRoute == Routes.SETTINGS,
                 selectedIcon = Icons.Filled.Settings,
                 unselectedIcon = Icons.Outlined.Settings,
-                rotationDegrees = 45f,
                 hasBadge = false,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -140,12 +136,11 @@ fun DockBottomBar(
 }
 
 @Composable
-private fun GoogleNavItem(
+private fun DockNavItem(
     label: String,
     selected: Boolean,
     selectedIcon: ImageVector,
     unselectedIcon: ImageVector,
-    rotationDegrees: Float,
     hasBadge: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -153,7 +148,7 @@ private fun GoogleNavItem(
     val colors = DockTheme.colors
     val isReducedMotion = LocalReducedMotion.current
 
-    // 1. Google Signature Pill Indicator Animations
+    // 1. Signature Pill Indicator Animations
     val targetPillWidth = if (selected) 64.dp else 28.dp
     val pillWidth by animateDpAsState(
         targetValue = targetPillWidth,
@@ -175,7 +170,7 @@ private fun GoogleNavItem(
         label = "pillColor"
     )
 
-    // 2. Icon Spring Scale & Micro-Rotation Animations
+    // 2. Icon Spring Scale (calm, zero rotation)
     val targetScale = if (selected) 1.0f else 0.94f
     val iconScale by animateFloatAsState(
         targetValue = targetScale,
@@ -184,16 +179,6 @@ private fun GoogleNavItem(
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "iconScale"
-    )
-
-    val targetRotation = if (selected) 0f else rotationDegrees
-    val iconRotation by animateFloatAsState(
-        targetValue = targetRotation,
-        animationSpec = if (isReducedMotion) tween(0) else spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "iconRotation"
     )
 
     // 3. Color & Typography Transitions
@@ -237,12 +222,11 @@ private fun GoogleNavItem(
         ) {
             Icon(
                 imageVector = if (selected) selectedIcon else unselectedIcon,
-                contentDescription = label,
+                contentDescription = null, // Handled cleanly by label Text + Role.Tab
                 tint = iconTint,
                 modifier = Modifier
                     .size(24.dp)
                     .scale(iconScale)
-                    .rotate(iconRotation)
             )
 
             // Activity / Notification Badge Dot

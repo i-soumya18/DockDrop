@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — DockDrop</title>
+  <meta name="description" content="Frequently asked questions about DockDrop: what SSDs are supported, how verification works, WhatsApp backup, encryption, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg class="nav-icon" viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="22" rx="5" stroke="#4F8CFF" stroke-width="2.5"/><rect x="16" y="28" width="8" height="3" rx="1.5" fill="#4F8CFF"/><line x1="20" y1="6" x2="20" y2="14" stroke="#4F8CFF" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="nav-wordmark">DockDrop</span>
+      </a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="faq.html" style="color:var(--text-primary)">FAQ</a>
+      </div>
+      <a href="index.html#download" class="btn btn-sm btn-primary">Get the app</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="features.html">Features</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="faq.html">FAQ</a>
+      <a href="index.html#download" class="btn btn-primary">Get the app</a>
+    </div>
+  </nav>
+
+  <section class="section page-hero" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79,140,255,0.08) 0%, transparent 70%);">
+    <div class="container">
+      <div class="section-label">FAQ</div>
+      <h1 class="section-title">Frequently asked questions</h1>
+      <p class="section-sub" style="margin:16px auto 0;">Honest answers. No marketing speak.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:40px;">
+    <div class="container">
+
+      <div style="margin-bottom:40px;">
+        <div class="section-label" style="margin-bottom:16px;">General</div>
+        <div class="faq-list">
+          <div class="faq-item open">
+            <div class="faq-q" id="fq1">
+              What is DockDrop?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>DockDrop is an Android app that backs up your phone to an external SSD you own. Plug in the SSD, tap once, and your photos, videos and documents are copied, SHA-256 verified, and sealed. No cloud, no subscription, no account needed.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq2">
+              Is DockDrop free?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Yes. DockDrop is free, with no in-app purchases, no premium tier, no subscription. It&rsquo;s open source under Apache 2.0. There are no ads and no analytics.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq3">
+              Do I need an account?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>No. DockDrop has no accounts, no sign-in, no cloud sync. Your backup lives on your SSD. Nothing is sent anywhere.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq4">
+              Which Android versions are supported?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>DockDrop supports Android 8.0 (API 26) and above. It targets Android 15 (API 35). The reference test device is a Samsung Galaxy A14 running One UI 7.0 / Android 15. Samsung battery optimization behavior is specifically addressed in the onboarding.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:40px;">
+        <div class="section-label" style="margin-bottom:16px;">Hardware &amp; Compatibility</div>
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-q" id="fq5">
+              Which SSDs work?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Any USB-C external SSD or flash drive formatted as <strong>exFAT</strong> (recommended) or FAT32 should work. DockDrop was verified on a Hikvision 128 GB exFAT SSD on a Samsung Galaxy A14.</p>
+              <p style="margin-top:8px;"><strong>NTFS drives often appear as read-only on Android</strong> &mdash; DockDrop will detect this and show an amber warning. Reformatting to exFAT resolves it. FAT32 works but has a 4 GB file size limit. DockDrop checks write access with a test write before starting any backup.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq6">
+              Do I need a USB OTG adapter?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>If your phone and SSD both have USB-C, a direct cable usually works. If your SSD is USB-A, you&rsquo;ll need a USB-A to USB-C OTG adapter. DockDrop doesn&rsquo;t require any specific adapter &mdash; it uses Android&rsquo;s standard USB host stack.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq7">
+              How fast is the backup?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Measured on a Samsung Galaxy A14 with a Hikvision exFAT SSD via USB-C:</p>
+              <ul style="margin-top:8px; padding-left:20px; color:var(--text-secondary); font-size:14px; line-height:2;">
+                <li>Sequential write (1 GB): <strong>35.9 MB/s</strong></li>
+                <li>Small files (2,000 &times; 100 KB): <strong>2.24 MB/s / 23 files/s</strong></li>
+                <li>Mixed real data (2.4 GB): <strong>14.6 MB/s / 14 files/s</strong></li>
+              </ul>
+              <p style="margin-top:8px;">A first 20 GB backup (copy + SHA-256 on copy + re-read) takes roughly 23&ndash;38 minutes. Subsequent backups of unchanged data complete in seconds (zero bytes copied).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:40px;">
+        <div class="section-label" style="margin-bottom:16px;">Backup &amp; Restore</div>
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-q" id="fq8">
+              Can I back up WhatsApp messages and chats?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p><strong>No.</strong> DockDrop can back up WhatsApp Media (photos, videos, documents sent/received) from <code>Android/media/com.whatsapp/WhatsApp/Media</code>. However, WhatsApp&rsquo;s chat database, message history, and call logs live in <code>Android/data/com.whatsapp/</code>, which Android blocks all third-party apps from accessing. This is an Android OS restriction, not a DockDrop limitation. The same applies to every app&rsquo;s private data folder.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq9">
+              What happens if I pull the cable mid-backup?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>DockDrop writes a journal checkpoint and posts a notification: &ldquo;Backup interrupted at 63%. Plug the SSD back in to resume.&rdquo; When you reconnect, DockDrop reads the journal and picks up from where it stopped. The final result is byte-identical to a backup that ran uninterrupted. No <code>.part</code> files are left behind. The committed manifest generation from the previous run remains valid and intact.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq10">
+              What does &ldquo;Sealed&rdquo; mean? What&rsquo;s a Receipt?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p><strong>Sealed</strong> means every planned file was: written via temp-file + rename (atomic), size-matched on write, SHA-256 hashed during copy, re-read from the SSD and the hash matched, and the manifest generation was committed with a checksum. Only then does DockDrop show the green check.</p>
+              <p style="margin-top:8px;">The <strong>Receipt</strong> is a summary card showing: number of files, total size, duration, and the exact verification level used (e.g. &ldquo;size + SHA-256 on copy + re-read&rdquo;). It always says &ldquo;Nothing was deleted from your phone.&rdquo; You can share it as plain text.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq11">
+              Can I restore to a different phone?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Yes. Install DockDrop on the new phone, plug in the SSD, and DockDrop will detect the backup automatically and offer to restore it. It maps each source folder to the new phone&rsquo;s folder structure and guides you through granting permissions. You can also restore without DockDrop at all by opening the plain folders on any laptop.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq12">
+              Does DockDrop delete anything from my phone?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p><strong>Never.</strong> A Drop never modifies or deletes anything on your phone. DockDrop is read-only on the phone side. The Receipt always confirms: &ldquo;Nothing was deleted from your phone.&rdquo;</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq13">
+              What happens to files I delete from my phone?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>By default (deletion policy: &ldquo;Keep them on the SSD&rdquo;), files deleted from your phone are moved to a <code>_deleted/&lt;SetName&gt;/&lt;date&gt;/</code> folder on your SSD. They are never removed unless you choose &ldquo;Mirror exactly&rdquo; mode or set a &ldquo;Keep for N days&rdquo; policy. Mirror mode has a mass-delete guard: if more than 20% of a Set&rsquo;s files or 500 files would be removed in one run, the Drop stops and shows you the list first.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:40px;">
+        <div class="section-label" style="margin-bottom:16px;">Privacy &amp; Security</div>
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-q" id="fq14">
+              Does DockDrop connect to the internet?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p><strong>No. Never.</strong> DockDrop declares no <code>INTERNET</code> permission in its AndroidManifest.xml. Android&rsquo;s permission system makes it impossible for the app to open network connections. This is enforced automatically &mdash; a CI lint check fails the build if <code>INTERNET</code> or <code>ACCESS_NETWORK_STATE</code> ever appear. You can verify: Settings &rarr; Apps &rarr; DockDrop &rarr; Permissions.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq15">
+              Is encryption available?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Yes, as an optional per-Set feature. DockDrop uses AES-256-GCM chunked streaming encryption with scrypt/Argon2id key derivation. You set a passphrase and get a recovery key. Both are required to restore an encrypted backup on a new device. DockDrop tells you this upfront &mdash; if you lose both, the backup cannot be opened.</p>
+              <p style="margin-top:8px;">Encryption is <strong>off by default</strong>. Unencrypted backups are plain folders readable on any laptop without DockDrop.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq16">
+              Is DockDrop open source?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Yes. DockDrop is open source under the <a href="https://github.com/i-soumya18/DockDrop/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0 license</a>. You can read every line of code, the AndroidManifest.xml, and the CI configuration on <a href="https://github.com/i-soumya18/DockDrop" target="_blank" rel="noopener">GitHub</a>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:40px;">
+        <div class="section-label" style="margin-bottom:16px;">Troubleshooting</div>
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-q" id="fq17">
+              The backup stopped after a while. Why?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>Android limits certain foreground services to 6 hours per 24-hour period. If DockDrop approaches the limit, it saves a journal checkpoint and posts a &ldquo;Continue backup?&rdquo; notification. Tap it to resume from exactly where it stopped. On Samsung devices with aggressive battery optimization, you may need to follow the in-app Samsung battery guidance (Settings &rarr; Keep running) to let DockDrop finish with the screen off.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq18">
+              My SSD shows as read-only. What do I do?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>This usually means the SSD is formatted as <strong>NTFS</strong>, which Android can read but not write. DockDrop detects this and shows an amber warning. <strong>Reformat the SSD to exFAT</strong> on your computer &mdash; it works on Windows, Mac, and Android. exFAT has no file size limits and is the recommended format for external SSDs used with Android.</p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" id="fq19">
+              DockDrop didn&rsquo;t detect my SSD. How do I trigger a backup?
+              <span class="faq-arrow">&#8964;</span>
+            </div>
+            <div class="faq-a">
+              <p>If the automatic USB notification didn&rsquo;t appear, check that you granted DockDrop USB device access in the system dialog. You can also trigger a backup manually using the Quick Settings tile (&ldquo;Back up now&rdquo;) or by opening DockDrop directly and tapping &ldquo;Back up now&rdquo; from the home screen.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card reveal" style="padding:40px; text-align:center; max-width:600px; margin:0 auto; border:1px solid rgba(79,140,255,0.2);">
+        <h3 style="font-family:var(--font-display); font-size:22px; color:var(--text-primary); margin-bottom:10px;">Still have questions?</h3>
+        <p style="font-size:15px; margin-bottom:24px;">Open an issue on GitHub or check the project README.</p>
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <a href="https://github.com/i-soumya18/DockDrop/issues" target="_blank" rel="noopener" class="btn btn-primary">Open an issue</a>
+          <a href="https://github.com/i-soumya18/DockDrop/blob/main/README.md" target="_blank" rel="noopener" class="btn btn-ghost">Read the README</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Soumya Ranjan Sahoo &middot; <a href="index.html">DockDrop</a> &middot; <a href="https://github.com/i-soumya18/DockDrop/blob/main/LICENSE">Apache 2.0</a></p>
+        <div class="footer-trust-chip">&#128274; Offline by design. Network permission: none.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

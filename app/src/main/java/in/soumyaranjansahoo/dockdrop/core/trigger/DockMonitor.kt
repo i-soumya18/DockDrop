@@ -32,27 +32,36 @@ class DockMonitor(
     private var mountTimeoutJob: Job? = null
     private var isMonitoring = false
 
-    private val volumeCallback = object : StorageManager.StorageVolumeCallback() {
-        override fun onStateChanged(volume: StorageVolume) {
-            checkStorageVolumes()
+    private val volumeCallback: StorageManager.StorageVolumeCallback? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            object : StorageManager.StorageVolumeCallback() {
+                override fun onStateChanged(volume: StorageVolume) {
+                    checkStorageVolumes()
+                }
+            }
+        } else {
+            null
         }
-    }
 
     fun startMonitoring() {
         if (isMonitoring) return
         isMonitoring = true
-        try {
-            storageManager.registerStorageVolumeCallback(context.mainExecutor, volumeCallback)
-        } catch (_: Exception) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && volumeCallback != null) {
+            try {
+                storageManager.registerStorageVolumeCallback(context.mainExecutor, volumeCallback)
+            } catch (_: Exception) {}
+        }
         checkStorageVolumes()
     }
 
     fun stopMonitoring() {
         if (!isMonitoring) return
         isMonitoring = false
-        try {
-            storageManager.unregisterStorageVolumeCallback(volumeCallback)
-        } catch (_: Exception) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && volumeCallback != null) {
+            try {
+                storageManager.unregisterStorageVolumeCallback(volumeCallback)
+            } catch (_: Exception) {}
+        }
     }
 
     fun onUsbAttached() {

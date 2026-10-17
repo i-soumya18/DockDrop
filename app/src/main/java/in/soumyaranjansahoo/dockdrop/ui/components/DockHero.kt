@@ -25,10 +25,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -117,6 +119,7 @@ fun DockHero(
         modifier = modifier
             .size(210.dp)
             .semantics(mergeDescendants = true) {
+                contentDescription = "Dock SSD status"
                 stateDescription = a11yStateDescription
             },
         contentAlignment = Alignment.Center
@@ -254,7 +257,7 @@ fun DockHero(
                         style = Stroke(width = 3.5.dp.toPx())
                     )
                     drawArc(
-                        color = colors.seal,
+                        color = colors.dock,
                         startAngle = scanAngle,
                         sweepAngle = 70f,
                         useCenter = false,
@@ -269,7 +272,7 @@ fun DockHero(
                         alpha = 1f,
                         bodyColor = colors.surface,
                         borderColor = colors.outline,
-                        ledColor = colors.seal,
+                        ledColor = colors.dock,
                         cableColor = colors.dock
                     )
                 }
@@ -358,7 +361,8 @@ private fun DrawScope.drawSolidSsd(
     bodyColor: Color,
     borderColor: Color,
     ledColor: Color,
-    cableColor: Color
+    cableColor: Color,
+    shadowColor: Color = borderColor.copy(alpha = 0.35f)
 ) {
     val driveWidth = 74.dp.toPx()
     val driveHeight = 98.dp.toPx()
@@ -402,9 +406,9 @@ private fun DrawScope.drawSolidSsd(
 
     // 2. Drive Solid Body Fill
     if (!isGhost) {
-        // Subtle drop shadow / back layer
+        // Subtle tonal depth underlayer adapting to theme
         drawRoundRect(
-            color = Color.Black.copy(alpha = 0.06f),
+            color = shadowColor,
             topLeft = Offset(driveTopLeft.x, driveTopLeft.y + 2.dp.toPx()),
             size = Size(driveWidth, driveHeight),
             cornerRadius = cornerRadius
@@ -458,9 +462,21 @@ private fun DrawScope.drawCheckmark(center: Offset, trim: Float, tint: Color) {
         lineTo(center.x - 3.dp.toPx(), center.y + 13.dp.toPx())
         lineTo(center.x + 16.dp.toPx(), center.y - 10.dp.toPx())
     }
-    drawPath(
-        path = checkPath,
-        color = tint,
-        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
-    )
+    if (trim >= 1f) {
+        drawPath(
+            path = checkPath,
+            color = tint,
+            style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
+        )
+    } else {
+        val pathMeasure = PathMeasure()
+        pathMeasure.setPath(checkPath, forceClosed = false)
+        val segment = Path()
+        pathMeasure.getSegment(0f, pathMeasure.length * trim, segment, startWithMoveTo = true)
+        drawPath(
+            path = segment,
+            color = tint,
+            style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
+        )
+    }
 }

@@ -25,17 +25,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Policy
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -67,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import `in`.soumyaranjansahoo.dockdrop.core.model.DeletionPolicy
+import `in`.soumyaranjansahoo.dockdrop.core.model.Receipt
 import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
 import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.core.repository.SetRepository
@@ -79,6 +86,9 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 @Composable
@@ -88,12 +98,15 @@ fun SetDetailScreen(
     onBack: () -> Unit,
     onBackUpNow: () -> Unit,
     onDeleteConfirmed: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReceiptClick: ((Receipt) -> Unit)? = null,
+    onNavigateToHistory: (() -> Unit)? = null
 ) {
     val colors = DockTheme.colors
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sourceFolders by setRepository.getSourceFolders(set.id).collectAsState(initial = emptyList())
+    val receipts by setRepository.getReceipts(set.id).collectAsState(initial = emptyList())
 
     var isEditingName by remember { mutableStateOf(false) }
     var currentName by remember { mutableStateOf(set.name) }
@@ -186,7 +199,11 @@ fun SetDetailScreen(
                         showAddFolderNamingDialog = false
                         pendingAddFolderUri = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock),
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Add Folder", color = colors.onDock)
@@ -197,7 +214,8 @@ fun SetDetailScreen(
                     onClick = {
                         showAddFolderNamingDialog = false
                         pendingAddFolderUri = null
-                    }
+                    },
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                 ) {
                     Text("Cancel", color = colors.textTertiary)
                 }
@@ -239,14 +257,21 @@ fun SetDetailScreen(
                         }
                         folderToDelete = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.danger),
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.danger,
+                        contentColor = Color.White
+                    ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Remove", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { folderToDelete = null }) {
+                TextButton(
+                    onClick = { folderToDelete = null },
+                    modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                ) {
                     Text("Cancel", color = colors.textTertiary)
                 }
             },
@@ -264,7 +289,10 @@ fun SetDetailScreen(
                 onBackClick = onBack,
                 actions = {
                     if (!isEditingName) {
-                        IconButton(onClick = { isEditingName = true }) {
+                        IconButton(
+                            onClick = { isEditingName = true },
+                            modifier = Modifier.size(48.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.Edit,
                                 contentDescription = "Edit Name",
@@ -348,7 +376,10 @@ fun SetDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            TextButton(onClick = { isEditingName = false }) {
+                            TextButton(
+                                onClick = { isEditingName = false },
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            ) {
                                 Text("Cancel", color = colors.textTertiary)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -359,7 +390,11 @@ fun SetDetailScreen(
                                         setRepository.updateSet(set.copy(name = currentName))
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.dock),
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.dock,
+                                    contentColor = colors.onDock
+                                ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text("Save", color = colors.onDock)
@@ -409,7 +444,8 @@ fun SetDetailScreen(
 
                         TextButton(
                             onClick = { addFolderLauncher.launch(null) },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Add,
@@ -462,13 +498,13 @@ fun SetDetailScreen(
                                 if (sourceFolders.size > 1) {
                                     IconButton(
                                         onClick = { folderToDelete = folder },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Delete,
                                             contentDescription = "Remove ${folder.label}",
                                             tint = colors.textTertiary,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                 }
@@ -610,6 +646,83 @@ fun SetDetailScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Recent Receipts History Card (SCREENS.md S17)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+                colors = CardDefaults.cardColors(containerColor = colors.surface)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.surfaceRaised),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.History,
+                                    contentDescription = null,
+                                    tint = colors.dock,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "BACKUP HISTORY (${receipts.size})",
+                                style = DockMono.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textTertiary
+                            )
+                        }
+
+                        if (receipts.isNotEmpty() && onNavigateToHistory != null) {
+                            TextButton(
+                                onClick = onNavigateToHistory,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            ) {
+                                Text(
+                                    "See all",
+                                    style = DockBodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = colors.dock
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (receipts.isEmpty()) {
+                        Text(
+                            text = "No backup runs recorded yet for this set. Tap \"Back up now\" once your SSD is connected to create your first cryptographic manifest.",
+                            style = DockBodySmall,
+                            color = colors.textSecondary
+                        )
+                    } else {
+                        val latestReceipts = remember(receipts) { receipts.take(5) }
+                        latestReceipts.forEachIndexed { index, receipt ->
+                            SetReceiptSummaryRow(
+                                receipt = receipt,
+                                onClick = onReceiptClick?.let { callback -> { callback(receipt) } }
+                            )
+                            if (index < latestReceipts.size - 1) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
             // Danger Zone Card
@@ -652,18 +765,26 @@ fun SetDetailScreen(
                                         onDeleteConfirmed()
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = colors.danger),
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.danger,
+                                    contentColor = Color.White
+                                ),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text("Confirm Delete", color = Color.White, style = DockBody.copy(fontWeight = FontWeight.SemiBold))
                             }
-                            TextButton(onClick = { showDeleteConfirm = false }) {
+                            TextButton(
+                                onClick = { showDeleteConfirm = false },
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+                            ) {
                                 Text("Cancel", color = colors.textTertiary)
                             }
                         }
                     } else {
                         OutlinedButton(
                             onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.defaultMinSize(minHeight = 48.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colors.danger.copy(alpha = 0.6f))
                         ) {
@@ -683,4 +804,111 @@ fun SetDetailScreen(
             Spacer(modifier = Modifier.height(30.dp))
         }
     }
+}
+
+@Composable
+private fun SetReceiptSummaryRow(
+    receipt: Receipt,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    val colors = DockTheme.colors
+    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.getDefault()) }
+    val formattedDate = remember(receipt.timestampMs) { dateFormat.format(Date(receipt.timestampMs)) }
+
+    val isVerified = receipt.isSealed
+    val statusColor = if (isVerified) colors.seal else colors.attention
+    val statusText = if (isVerified) "SEALED" else "PARTIAL"
+
+    val rowModifier = modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .background(colors.surfaceRaised)
+        .then(
+            if (onClick != null) {
+                Modifier.clickable { onClick() }
+            } else {
+                Modifier
+            }
+        )
+        .padding(horizontal = 12.dp, vertical = 10.dp)
+        .defaultMinSize(minHeight = 48.dp)
+
+    Row(
+        modifier = rowModifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(statusColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isVerified) Icons.Outlined.Verified else Icons.Outlined.Warning,
+                    contentDescription = statusText,
+                    tint = statusColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = statusText,
+                        style = DockMono.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    )
+                    Text(
+                        text = "·",
+                        style = DockMono.copy(fontSize = 11.sp, color = colors.textTertiary)
+                    )
+                    Text(
+                        text = formattedDate,
+                        style = DockBodySmall.copy(fontSize = 11.sp),
+                        color = colors.textSecondary
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${receipt.totalFilesVerified} files · ${formatBytes(receipt.totalBytesVerified)}",
+                    style = DockMono.copy(
+                        fontSize = 12.sp,
+                        color = colors.textPrimary,
+                        fontFeatureSettings = "tnum"
+                    )
+                )
+            }
+        }
+
+        if (onClick != null) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = colors.textTertiary,
+                modifier = Modifier.size(12.dp)
+            )
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+    return String.format(Locale.US, "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
 }

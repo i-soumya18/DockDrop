@@ -31,8 +31,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -191,36 +195,111 @@ fun HoldToRestoreButton(
         // Perimeter ring / fill Canvas
         Canvas(modifier = Modifier.fillMaxSize()) {
             val prog = progressAnim.value
+            val strokeW = 3.5.dp.toPx()
+            val inset = strokeW / 2f
+            val cornerRadiusPx = 20.dp.toPx()
+            val r = (cornerRadiusPx - inset).coerceAtLeast(0f)
+            val left = inset
+            val top = inset
+            val right = size.width - inset
+            val bottom = size.height - inset
+            val midX = size.width / 2f
+
+            // 1. Background subtle fill proportional to hold progress
             if (prog > 0f) {
-                // Background subtle fill
                 drawRoundRect(
-                    color = colors.dock.copy(alpha = 0.15f * prog),
-                    cornerRadius = CornerRadius(20.dp.toPx(), 20.dp.toPx())
+                    color = colors.dock.copy(alpha = 0.12f * prog),
+                    cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                )
+            }
+
+            // 2. Build rounded rectangle perimeter path starting at top center
+            val fullPath = Path().apply {
+                moveTo(midX, top)
+                lineTo(right - r, top)
+                if (r > 0f) {
+                    arcTo(
+                        rect = Rect(right - 2 * r, top, right, top + 2 * r),
+                        startAngleDegrees = -90f,
+                        sweepAngleDegrees = 90f,
+                        forceMoveTo = false
+                    )
+                }
+                lineTo(right, bottom - r)
+                if (r > 0f) {
+                    arcTo(
+                        rect = Rect(right - 2 * r, bottom - 2 * r, right, bottom),
+                        startAngleDegrees = 0f,
+                        sweepAngleDegrees = 90f,
+                        forceMoveTo = false
+                    )
+                }
+                lineTo(left + r, bottom)
+                if (r > 0f) {
+                    arcTo(
+                        rect = Rect(left, bottom - 2 * r, left + 2 * r, bottom),
+                        startAngleDegrees = 90f,
+                        sweepAngleDegrees = 90f,
+                        forceMoveTo = false
+                    )
+                }
+                lineTo(left, top + r)
+                if (r > 0f) {
+                    arcTo(
+                        rect = Rect(left, top, left + 2 * r, top + 2 * r),
+                        startAngleDegrees = 180f,
+                        sweepAngleDegrees = 90f,
+                        forceMoveTo = false
+                    )
+                }
+                lineTo(midX, top)
+                close()
+            }
+
+            // 3. Progressive perimeter sweep
+            if (prog > 0f) {
+                // Calm perimeter guide track
+                drawPath(
+                    path = fullPath,
+                    color = colors.outline.copy(alpha = 0.35f),
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
                 )
 
-                // Perimeter stroke fill (DESIGN.md §5.2.5)
-                val strokeW = 4.dp.toPx()
-                val inset = strokeW / 2f
-                val w = size.width - strokeW
-                val h = size.height - strokeW
-
-                val strokeColor = if (prog >= 1f) colors.seal else colors.dock
-                drawRoundRect(
-                    color = strokeColor,
-                    topLeft = Offset(inset, inset),
-                    size = Size(w, h),
-                    cornerRadius = CornerRadius(20.dp.toPx() - inset, 20.dp.toPx() - inset),
-                    style = Stroke(width = strokeW * prog)
-                )
+                // Progressive sweep fill
+                if (prog >= 1f) {
+                    // Full closed ring in earned seal green
+                    drawPath(
+                        path = fullPath,
+                        color = colors.seal,
+                        style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                    )
+                } else {
+                    val pathMeasure = PathMeasure()
+                    pathMeasure.setPath(fullPath, forceClosed = true)
+                    val totalLength = pathMeasure.length
+                    val segmentPath = Path()
+                    pathMeasure.getSegment(
+                        startDistance = 0f,
+                        stopDistance = totalLength * prog.coerceIn(0f, 1f),
+                        destination = segmentPath,
+                        startWithMoveTo = true
+                    )
+                    drawPath(
+                        path = segmentPath,
+                        color = colors.dock,
+                        style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                    )
+                }
             }
         }
 
+        val completionTextColor = if (colors.isDark) colors.seal else colors.sealText
         Text(
             text = buttonLabel,
             style = DockBody.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp,
-                color = if (enabled) (if (progressAnim.value >= 1f) colors.seal else colors.textPrimary) else colors.textTertiary
+                color = if (enabled) (if (progressAnim.value >= 1f) completionTextColor else colors.textPrimary) else colors.textTertiary
             )
         )
     }

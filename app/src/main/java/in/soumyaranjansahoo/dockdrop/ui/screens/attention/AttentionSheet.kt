@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderOff
+import androidx.compose.material.icons.outlined.SdCardAlert
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
@@ -33,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,8 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import `in`.soumyaranjansahoo.dockdrop.core.model.AttentionReason
@@ -50,8 +54,10 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.HapticFeedbackController
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSheet
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSm
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,16 +69,29 @@ fun AttentionSheet(
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
+    val context = LocalContext.current
+    val haptics = remember(context) { HapticFeedbackController(context) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var isReviewingFiles by remember { mutableStateOf(false) }
+
+    LaunchedEffect(reason) {
+        haptics.onAttention()
+    }
 
     val isDanger = reason is AttentionReason.MassDelete
     val accentColor = if (isDanger) colors.danger else colors.attention
 
+    val iconVector = when (reason) {
+        is AttentionReason.MassDelete -> Icons.Outlined.Warning
+        is AttentionReason.NoSpace -> Icons.Outlined.SdCardAlert
+        is AttentionReason.PermissionLost -> Icons.Outlined.FolderOff
+        is AttentionReason.ReadErrors -> Icons.Outlined.Warning
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet),
         containerColor = colors.surface,
         modifier = modifier
     ) {
@@ -85,25 +104,26 @@ fun AttentionSheet(
         ) {
             Box(
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
                     .background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Warning,
+                    imageVector = iconVector,
                     contentDescription = null,
                     tint = accentColor,
                     modifier = Modifier.size(28.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = reason.title,
                 style = DockHeadline,
-                color = colors.textPrimary
+                color = colors.textPrimary,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -111,18 +131,19 @@ fun AttentionSheet(
             Text(
                 text = reason.message,
                 style = DockBody,
-                color = colors.textSecondary
+                color = colors.textSecondary,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Reassurance Pledge Card
+            // Reassurance Pledge Card (Calm tonal surface layering, no premature seal green per CLAUDE.md Rule 2)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, colors.seal.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-                colors = CardDefaults.cardColors(containerColor = colors.seal.copy(alpha = 0.06f))
+                    .clip(RoundedCornerShape(RadiusSm))
+                    .border(1.dp, colors.outline.copy(alpha = 0.6f), RoundedCornerShape(RadiusSm)),
+                colors = CardDefaults.cardColors(containerColor = colors.surfaceRaised)
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -131,23 +152,23 @@ fun AttentionSheet(
                     Icon(
                         imageVector = Icons.Outlined.Shield,
                         contentDescription = null,
-                        tint = colors.seal,
+                        tint = colors.dock,
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = if (reason is AttentionReason.MassDelete) {
-                            "Safe guard active. Nothing has been deleted from your SSD yet."
+                            "Safeguard active. Nothing has been removed from your SSD."
                         } else {
-                            "Nothing was lost. Files copied so far are safely sealed on your SSD."
+                            "Nothing was lost. Files copied so far are safe."
                         },
                         style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = colors.seal
+                        color = colors.textSecondary
                     )
                 }
             }
 
-            // If MassDelete and reviewing files, show candidate list
+            // Candidate list for MassDelete review
             if (reason is AttentionReason.MassDelete && reason.paths.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -155,8 +176,8 @@ fun AttentionSheet(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+                            .clip(RoundedCornerShape(RadiusSm))
+                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(RadiusSm)),
                         colors = CardDefaults.cardColors(containerColor = colors.surfaceRaised)
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -184,14 +205,17 @@ fun AttentionSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             if (reason is AttentionReason.MassDelete) {
-                if (!isReviewingFiles) {
+                if (!isReviewingFiles && reason.paths.isNotEmpty()) {
                     Button(
                         onClick = { isReviewingFiles = true },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(RadiusMd),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.dock,
+                            contentColor = colors.onDock
+                        )
                     ) {
                         Text(
                             "Review ${reason.count} files",
@@ -203,52 +227,95 @@ fun AttentionSheet(
                         onClick = onPrimaryAction,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.danger)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(RadiusMd),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.danger,
+                            contentColor = colors.onDock
+                        )
                     ) {
                         Text(
-                            "Confirm deletion on SSD",
-                            color = Color.White,
+                            "Remove ${reason.count} files from SSD",
                             style = DockBody.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+
+                if (onSecondaryAction != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onSecondaryAction,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(RadiusSm),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                    ) {
+                        Text(
+                            "Keep all files",
+                            style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }
             } else {
                 val actionLabel = when (reason) {
-                    is AttentionReason.NoSpace -> "Retry after freeing space"
+                    is AttentionReason.NoSpace -> "Choose what to back up"
                     is AttentionReason.PermissionLost -> "Grant access again"
-                    is AttentionReason.ReadErrors -> "Retry read"
-                    is AttentionReason.MassDelete -> "Confirm deletions"
+                    is AttentionReason.ReadErrors -> "Retry"
+                    is AttentionReason.MassDelete -> "Review ${reason.count} files"
                 }
                 Button(
                     onClick = onPrimaryAction,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(RadiusMd),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
                 ) {
                     Text(
                         actionLabel,
                         style = DockBody.copy(fontWeight = FontWeight.Bold)
                     )
                 }
+
+                if (onSecondaryAction != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onSecondaryAction,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(RadiusSm),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary)
+                    ) {
+                        Text(
+                            when (reason) {
+                                is AttentionReason.NoSpace -> "Free up space"
+                                is AttentionReason.PermissionLost -> "Remove this folder"
+                                is AttentionReason.ReadErrors -> "Skip and continue"
+                                is AttentionReason.MassDelete -> "Keep all files"
+                            },
+                            style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedButton(
+            TextButton(
                 onClick = onDismiss,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .heightIn(min = 48.dp)
             ) {
                 Text(
-                    "Cancel",
+                    "Dismiss",
                     style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = colors.textSecondary
+                    color = colors.textTertiary
                 )
             }
         }

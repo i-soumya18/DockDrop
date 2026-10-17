@@ -1,6 +1,11 @@
 package `in`.soumyaranjansahoo.dockdrop.ui.screens.restore
 
 import android.net.Uri
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -48,7 +53,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import `in`.soumyaranjansahoo.dockdrop.core.crypto.EncryptedSetManager
@@ -71,9 +78,10 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.HapticFeedbackController
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.LocalReducedMotion
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSm
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -98,6 +106,7 @@ fun RestoreHubScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
+    val isReducedMotion = LocalReducedMotion.current
 
     val activeSet = sets.firstOrNull()
     val primaryBackup = discoveredBackups.firstOrNull()
@@ -105,6 +114,18 @@ fun RestoreHubScreen(
 
     var defaultPlan by remember { mutableStateOf<RestorePlan?>(null) }
     var isBuildingPlan by remember { mutableStateOf(false) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "restoreHubBreathe")
+    val animatedBreatheAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breatheAlpha"
+    )
+    val breatheAlpha = if (isReducedMotion) 0.8f else animatedBreatheAlpha
 
     LaunchedEffect(currentDock, activeSet, primaryBackup) {
         if (currentDock != null && activeSet != null) {
@@ -138,7 +159,7 @@ fun RestoreHubScreen(
             DockBottomBar(
                 currentRoute = Routes.RESTORE_HUB,
                 onNavigateToHome = onNavigateToHome,
-                onNavigateToRestore = { /* Already on Restore */ },
+                onNavigateToRestore = {},
                 onNavigateToSettings = onNavigateToSettings
             )
         }
@@ -161,56 +182,55 @@ fun RestoreHubScreen(
                 ) {
                     Text(
                         text = "Restore",
-                        style = DockTitle.copy(
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp
-                        ),
+                        style = DockHeadline,
                         color = colors.textPrimary
                     )
                 }
             }
 
-            // States: No Dock / Dock without DockDrop data / Ready
+            // States: No Dock / Dock without DockDrop data / Ready (SCREENS.md S12)
             if (currentDock == null) {
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     DockHero(state = DropState.NoDock)
                     Spacer(modifier = Modifier.height(20.dp))
                     DockEmptyState(
-                        title = "Plug in your SSD",
-                        description = "Connect the SSD that contains your DockDrop backup to restore your photos, videos, and documents.",
+                        title = "Plug in the SSD that has your backup",
+                        description = "Connect your drive to browse or restore your photos, videos, and documents.",
                         icon = Icons.Outlined.Usb
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                 }
-            } else if (primaryBackup == null && (activeSet == null || defaultPlan?.totalFilesSelected == 0)) {
+            } else if (!isBuildingPlan && primaryBackup == null && (activeSet == null || defaultPlan?.totalFilesSelected == 0)) {
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     DockHero(state = DropState.DockDetected(currentDock))
                     Spacer(modifier = Modifier.height(20.dp))
                     DockEmptyState(
-                        title = "No Backup Found",
-                        description = "No DockDrop backup was found on ${currentDock.userLabel}. Make a backup from the Dashboard first.",
+                        title = "No DockDrop backup found on this drive",
+                        description = "No backup manifest was found on ${currentDock.userLabel}. Run a backup from Home first.",
                         icon = Icons.Outlined.Storage
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             } else {
-                // Connected SSD & Backup Status Card
+                // Backup Summary Card (SCREENS.md S12)
                 item {
                     val dateStr = SimpleDateFormat("MMM d, yyyy", Locale.US).format(
                         Date(primaryBackup?.lastModifiedMs ?: activeSet?.lastSealedMs ?: System.currentTimeMillis())
                     )
                     val setName = activeSet?.name ?: primaryBackup?.setName ?: "Backup"
                     val fileCount = defaultPlan?.totalFilesSelected ?: primaryBackup?.generation?.entries?.size ?: 0
-                    val totalBytes = defaultPlan?.totalBytesToCopy ?: primaryBackup?.generation?.entries?.values?.sumOf { it.sizeBytes } ?: 0L
+                    val totalBytes = defaultPlan?.totalBytesToCopy
+                        ?: primaryBackup?.generation?.entries?.values?.sumOf { it.sizeBytes }
+                        ?: 0L
+                    val isEncryptedSet = (primaryBackup?.isEncrypted == true) || (activeSet?.isEncrypted == true)
 
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+                            .clip(RoundedCornerShape(RadiusMd))
+                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(RadiusMd)),
                         colors = CardDefaults.cardColors(containerColor = colors.surface)
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
@@ -228,7 +248,7 @@ fun RestoreHubScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Storage,
+                                            imageVector = if (isEncryptedSet) Icons.Outlined.Lock else Icons.Outlined.Storage,
                                             contentDescription = null,
                                             tint = colors.dock,
                                             modifier = Modifier.size(22.dp)
@@ -237,7 +257,7 @@ fun RestoreHubScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(
-                                            text = setName,
+                                            text = "Latest backup · $setName",
                                             style = DockBody.copy(fontWeight = FontWeight.Bold),
                                             color = colors.textPrimary
                                         )
@@ -249,10 +269,11 @@ fun RestoreHubScreen(
                                     }
                                 }
 
+                                // Connected Dock Chip (uses colors.dock; green is earned only after verification)
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(colors.seal.copy(alpha = 0.12f))
+                                        .background(colors.dock.copy(alpha = 0.12f))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -260,10 +281,17 @@ fun RestoreHubScreen(
                                             modifier = Modifier
                                                 .size(6.dp)
                                                 .clip(CircleShape)
-                                                .background(colors.seal)
+                                                .background(colors.dock)
                                         )
                                         Spacer(modifier = Modifier.width(5.dp))
-                                        Text("Ready", style = DockMono.copy(color = colors.seal, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+                                        Text(
+                                            "Connected",
+                                            style = DockMono.copy(
+                                                color = colors.dock,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
                                     }
                                 }
                             }
@@ -281,16 +309,31 @@ fun RestoreHubScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Latest Backup", style = DockBodySmall, color = colors.textSecondary)
-                                Text(dateStr, style = DockMono.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp), color = colors.textPrimary)
+                                Text("Last sealed", style = DockBodySmall, color = colors.textSecondary)
+                                Text(
+                                    dateStr,
+                                    style = DockMono.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp),
+                                    color = colors.textPrimary
+                                )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Recoverable Data", style = DockBodySmall, color = colors.textSecondary)
-                                Text("$fileCount files · ${formatBytes(totalBytes)}", style = DockMono.copy(fontWeight = FontWeight.SemiBold, fontSize = 12.sp), color = colors.dock)
+                                Text("Backup size", style = DockBodySmall, color = colors.textSecondary)
+                                Text(
+                                    text = if (isBuildingPlan) {
+                                        "Reading manifest…"
+                                    } else {
+                                        String.format(Locale.US, "%,d files · %s", fileCount, formatBytes(totalBytes))
+                                    },
+                                    style = DockMono.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp,
+                                        color = if (isBuildingPlan) colors.textSecondary.copy(alpha = breatheAlpha) else colors.dock
+                                    )
+                                )
                             }
 
                             if (primaryBackup != null && primaryBackup.deviceLabel != android.os.Build.MODEL) {
@@ -299,8 +342,12 @@ fun RestoreHubScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Source Device", style = DockBodySmall, color = colors.textSecondary)
-                                    Text(primaryBackup.deviceLabel, style = DockMono.copy(fontSize = 12.sp), color = colors.textSecondary)
+                                    Text("Backup from", style = DockBodySmall, color = colors.textSecondary)
+                                    Text(
+                                        primaryBackup.deviceLabel,
+                                        style = DockMono.copy(fontSize = 12.sp),
+                                        color = colors.textSecondary
+                                    )
                                 }
                             }
                         }
@@ -308,27 +355,28 @@ fun RestoreHubScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Hold To Restore Button & Details
+                // Hero Hold Button & 3 Info Lines (SCREENS.md S12)
                 item {
                     val plan = defaultPlan
                     val hasGaps = plan != null && plan.permissionGaps.isNotEmpty()
                     val isLockedEncrypted = primaryBackup != null && primaryBackup.isEncrypted &&
-                            (encryptedSetManager?.isSetUnlocked(primaryBackup.setId) != true)
+                        (encryptedSetManager?.isSetUnlocked(primaryBackup.setId) != true)
 
                     if (isLockedEncrypted) {
                         Button(
-                            onClick = {
-                                onPromptUnlock(primaryBackup!!)
-                            },
+                            onClick = { onPromptUnlock(primaryBackup!!) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(64.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.dock, contentColor = colors.onDock)
+                                .height(72.dp),
+                            shape = RoundedCornerShape(RadiusMd),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.dock,
+                                contentColor = colors.onDock
+                            )
                         ) {
                             Icon(imageVector = Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Unlock to restore", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                            Text("Unlock to restore", style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                         }
                     } else if (hasGaps) {
                         Button(
@@ -337,16 +385,22 @@ fun RestoreHubScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(64.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = colors.attention, contentColor = colors.onDock)
+                                .height(72.dp),
+                            shape = RoundedCornerShape(RadiusMd),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.attention,
+                                contentColor = colors.onDock
+                            )
                         ) {
-                            Text("Grant ${plan.permissionGaps.size} folders first", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                "Grant ${plan.permissionGaps.size} folders first",
+                                style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            )
                         }
                     } else {
                         HoldToRestoreButton(
                             text = "Hold to restore everything",
-                            enabled = plan != null && plan.canExecute,
+                            enabled = plan != null && plan.canExecute && !isBuildingPlan,
                             haptics = haptics,
                             onHoldComplete = {
                                 if (plan != null) onExecutePlan(plan)
@@ -359,17 +413,23 @@ fun RestoreHubScreen(
                     val filesCount = plan?.totalFilesToCopy ?: 0
                     val sizeFormatted = formatBytes(plan?.totalBytesToCopy ?: 0L)
                     Text(
-                        text = "To original folders · Keep both if file exists · $filesCount files, $sizeFormatted",
+                        text = String.format(
+                            Locale.US,
+                            "To original folders · Keep both if a file already exists · %,d files, %s",
+                            filesCount,
+                            sizeFormatted
+                        ),
                         style = DockBodySmall.copy(fontSize = 12.sp),
-                        color = colors.textTertiary
+                        color = colors.textTertiary,
+                        textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Granular Restore Options Card
+                // Selective Restore Options Card (SCREENS.md S12: "Or restore part of it")
                 item {
                     Text(
-                        text = "SELECTIVE RESTORE OPTIONS",
+                        text = "OR RESTORE PART OF IT",
                         style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                         color = colors.textTertiary,
                         modifier = Modifier
@@ -380,26 +440,26 @@ fun RestoreHubScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+                            .clip(RoundedCornerShape(RadiusMd))
+                            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(RadiusMd)),
                         colors = CardDefaults.cardColors(containerColor = colors.surface)
                     ) {
                         Column {
                             ActionRow(
                                 title = "Choose folders or files",
-                                subtitle = "Browse the full backup tree or search by name",
+                                subtitle = "Browse the backup tree or search by file name",
                                 icon = Icons.Outlined.FolderOpen,
-                                iconColor = colors.dock,
+                                iconColor = colors.categoryPhoto,
                                 onClick = {
                                     if (activeSet != null) onNavigateToBrowser(activeSet)
                                 }
                             )
                             HorizontalDivider(color = colors.outline.copy(alpha = 0.35f))
                             ActionRow(
-                                title = "Restore to a custom folder",
-                                subtitle = "Extract backup into a single folder of your choice",
+                                title = "Restore to a different folder",
+                                subtitle = "Copy files into a single folder you choose",
                                 icon = Icons.AutoMirrored.Outlined.DriveFileMove,
-                                iconColor = Color(0xFF6366F1),
+                                iconColor = colors.categoryVideo,
                                 onClick = {
                                     if (activeSet != null) onNavigateToCustomFolderRestore(activeSet)
                                 }
@@ -407,9 +467,9 @@ fun RestoreHubScreen(
                             HorizontalDivider(color = colors.outline.copy(alpha = 0.35f))
                             ActionRow(
                                 title = "Restore to a new phone",
-                                subtitle = "Guided mapping of protected folders to clean phone storage",
+                                subtitle = "Guided folder mapping onto a clean device",
                                 icon = Icons.Outlined.PhoneAndroid,
-                                iconColor = colors.seal,
+                                iconColor = colors.categoryDocument,
                                 onClick = {
                                     if (primaryBackup != null) onNavigateToNewPhone(primaryBackup)
                                 }
@@ -419,14 +479,15 @@ fun RestoreHubScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Drill / Diagnostic Card
+                // Test Restore Drill Row (SCREENS.md S12)
                 item {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .border(1.dp, colors.outline.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-                            .clickable {
+                            .defaultMinSize(minHeight = 56.dp)
+                            .clip(RoundedCornerShape(RadiusSm))
+                            .border(1.dp, colors.outline.copy(alpha = 0.4f), RoundedCornerShape(RadiusSm))
+                            .clickable(role = Role.Button) {
                                 if (activeSet != null) {
                                     val vaultUri = Uri.parse(activeSet.destinationVaultUriString)
                                     scope.launch {
@@ -452,13 +513,13 @@ fun RestoreHubScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(colors.attention.copy(alpha = 0.12f)),
+                                    .background(colors.dock.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Speed,
                                     contentDescription = null,
-                                    tint = colors.attention,
+                                    tint = colors.dock,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -471,7 +532,7 @@ fun RestoreHubScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    "Zero-risk drill to verify physical reads and hash integrity",
+                                    "Restore drill into a temporary folder with SHA-256 verification",
                                     style = DockBodySmall,
                                     color = colors.textSecondary
                                 )
@@ -503,7 +564,8 @@ private fun ActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .defaultMinSize(minHeight = 64.dp)
+            .clickable(role = Role.Button) { onClick() }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -539,5 +601,5 @@ private fun ActionRow(
 
 private fun formatBytes(bytes: Long): String {
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
-    return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
+    return if (gb >= 1.0) String.format(Locale.US, "%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
 }

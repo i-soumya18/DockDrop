@@ -4,9 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -24,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 
 /**
  * Premium Google-style empty state layout with vector iconography inside
@@ -67,8 +72,7 @@ fun DockEmptyState(
 
         Text(
             text = title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+            style = DockTitle.copy(fontWeight = FontWeight.Bold),
             color = colors.textPrimary,
             textAlign = TextAlign.Center
         )
@@ -77,26 +81,28 @@ fun DockEmptyState(
 
         Text(
             text = description,
-            fontSize = 13.sp,
+            style = DockBodySmall.copy(lineHeight = 20.sp),
             color = colors.textSecondary,
-            textAlign = TextAlign.Center,
-            lineHeight = 19.sp
+            textAlign = TextAlign.Center
         )
 
         if (actionText != null && onActionClick != null) {
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = onActionClick,
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .defaultMinSize(minWidth = 120.dp, minHeight = 48.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.dock,
                     contentColor = colors.onDock
-                )
+                ),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
             ) {
                 Text(
                     text = actionText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
         }

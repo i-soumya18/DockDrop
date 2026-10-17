@@ -49,13 +49,34 @@ val DockLabel = TextStyle(
     letterSpacing = 0.24.sp
 )
 
-// Monospace with tabular numbers for speeds, ETAs, file sizes, and paths
+// Monospace with tabular numbers (tnum) for speeds, ETAs, file sizes, and paths
 val DockMono = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontWeight = FontWeight.Medium,
     fontSize = 13.sp,
-    lineHeight = 18.sp
+    lineHeight = 18.sp,
+    fontFeatureSettings = "tnum"
 )
+
+// Dedicated counter typography styles with tabular figures (prevents layout wiggles)
+val DockCounterDisplay = DockDisplay.copy(fontFeatureSettings = "tnum")
+val DockCounterHeadline = DockHeadline.copy(fontFeatureSettings = "tnum")
+val DockCounterTitle = DockTitle.copy(fontFeatureSettings = "tnum")
+val DockCounterBody = DockBody.copy(fontFeatureSettings = "tnum")
+
+object DockTypography {
+    val display: TextStyle = DockDisplay
+    val headline: TextStyle = DockHeadline
+    val title: TextStyle = DockTitle
+    val body: TextStyle = DockBody
+    val bodySmall: TextStyle = DockBodySmall
+    val label: TextStyle = DockLabel
+    val mono: TextStyle = DockMono
+    val counterDisplay: TextStyle = DockCounterDisplay
+    val counterHeadline: TextStyle = DockCounterHeadline
+    val counterTitle: TextStyle = DockCounterTitle
+    val counterBody: TextStyle = DockCounterBody
+}
 
 val Typography = Typography(
     displayLarge = DockDisplay,

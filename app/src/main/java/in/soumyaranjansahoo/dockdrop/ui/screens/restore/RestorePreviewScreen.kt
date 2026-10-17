@@ -1,19 +1,17 @@
 package `in`.soumyaranjansahoo.dockdrop.ui.screens.restore
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
@@ -31,7 +28,6 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SkipNext
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,8 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,12 +64,13 @@ import `in`.soumyaranjansahoo.dockdrop.ui.components.DockSelectableCard
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
-import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockHeadline
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockMono
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusSm
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @Composable
 fun RestorePreviewScreen(
@@ -96,7 +91,6 @@ fun RestorePreviewScreen(
     var customFolderLabel by remember { mutableStateOf<String?>(null) }
     var conflictPolicy by remember { mutableStateOf(ConflictPolicy.KEEP_BOTH) }
 
-    // Map: folderLabel -> treeUriString (mutable so gaps can be granted live)
     val folderMappings = remember {
         mutableStateMapOf<String, String>().apply {
             sourceFolders.forEach { put(it.label, it.treeUriString) }
@@ -163,7 +157,11 @@ fun RestorePreviewScreen(
         topBar = {
             DockTopAppBar(
                 title = "Restore Preview",
-                subtitle = "${selectedEntries.size} items selected",
+                subtitle = if (selectedEntries.isNotEmpty()) {
+                    String.format(Locale.US, "%,d files selected", selectedEntries.size)
+                } else {
+                    set.name
+                },
                 onBackClick = onBackClick
             )
         },
@@ -185,7 +183,7 @@ fun RestorePreviewScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(RadiusMd),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.dock,
                         contentColor = colors.onDock,
@@ -194,12 +192,12 @@ fun RestorePreviewScreen(
                     )
                 ) {
                     val label = when {
-                        isRecalculating -> "Calculating Plan…"
+                        isRecalculating -> "Calculating restore plan…"
                         p == null -> "Preparing…"
-                        p.permissionGaps.isNotEmpty() -> "Grant Missing Folders First"
-                        !p.hasEnoughSpace -> "Insufficient Storage Space"
-                        p.totalFilesToCopy == 0 -> "0 Files to Copy"
-                        else -> "Start Restore · ${p.totalFilesToCopy} files"
+                        p.permissionGaps.isNotEmpty() -> "Grant missing folders first"
+                        !p.hasEnoughSpace -> "Not enough space on phone"
+                        p.totalFilesToCopy == 0 -> "0 files to restore"
+                        else -> String.format(Locale.US, "Restore %,d files", p.totalFilesToCopy)
                     }
                     Text(label, style = DockBody.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp))
                 }
@@ -212,17 +210,22 @@ fun RestorePreviewScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
         ) {
-            // Summary Header Card
+            // Summary Header Card (SCREENS.md S14: "{n} files · {size}")
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                val totalSelected = selectedEntries.size
-                val totalBytes = selectedEntries.sumOf { it.sizeBytes }
+                val p = plan
+                val totalSelected = if (selectedEntries.isNotEmpty()) selectedEntries.size else (p?.totalFilesSelected ?: 0)
+                val totalBytes = if (selectedEntries.isNotEmpty()) {
+                    selectedEntries.sumOf { it.sizeBytes }
+                } else {
+                    p?.totalBytesToCopy ?: 0L
+                }
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+                        .clip(RoundedCornerShape(RadiusMd))
+                        .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(RadiusMd)),
                     colors = CardDefaults.cardColors(containerColor = colors.surface)
                 ) {
                     Row(
@@ -234,7 +237,7 @@ fun RestorePreviewScreen(
                         Box(
                             modifier = Modifier
                                 .size(46.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(RadiusSm))
                                 .background(colors.dock.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -248,14 +251,15 @@ fun RestorePreviewScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
-                                text = "$totalSelected files selected",
-                                style = DockTitle.copy(fontSize = 17.sp),
+                                text = String.format(Locale.US, "%,d files · %s", totalSelected, formatBytes(totalBytes)),
+                                style = DockTitle.copy(fontSize = 18.sp),
                                 color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Total volume: ${formatBytes(totalBytes)}",
-                                style = DockMono.copy(color = colors.dock, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                text = "Verified with SHA-256 on restore",
+                                style = DockBodySmall,
+                                color = colors.textSecondary
                             )
                         }
                     }
@@ -263,31 +267,36 @@ fun RestorePreviewScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
 
-            // Destination Selector
+            // Destination Selector (SCREENS.md S14)
             item {
                 Text(
-                    "RESTORE DESTINATION",
+                    "DESTINATION",
                     style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                     color = colors.textTertiary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
                 DockSelectableCard(
-                    title = "Original folders (Recommended)",
-                    subtitle = "Puts photos back in DCIM, documents back in Documents, etc.",
+                    title = "Original folders",
+                    subtitle = "Restores Camera to DCIM, Documents to Documents, etc.",
                     selected = isOriginalDestination,
                     onClick = { isOriginalDestination = true },
                     icon = Icons.Outlined.Folder,
                     iconBgColor = colors.dock.copy(alpha = 0.12f),
                     iconTintColor = colors.dock,
+                    trailingBadge = "Default",
                     isRadio = true
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 DockSelectableCard(
-                    title = "Extract to a custom folder",
-                    subtitle = if (!isOriginalDestination && customFolderLabel != null) "Restoring to: $customFolderLabel" else "Choose a single directory on your phone",
+                    title = "Choose folder",
+                    subtitle = if (!isOriginalDestination && customFolderLabel != null) {
+                        "Destination: $customFolderLabel"
+                    } else {
+                        "Restore everything into a single folder you pick"
+                    },
                     selected = !isOriginalDestination,
                     onClick = {
                         isOriginalDestination = false
@@ -296,8 +305,8 @@ fun RestorePreviewScreen(
                         }
                     },
                     icon = Icons.AutoMirrored.Outlined.DriveFileMove,
-                    iconBgColor = Color(0xFF6366F1).copy(alpha = 0.12f),
-                    iconTintColor = Color(0xFF6366F1),
+                    iconBgColor = colors.categoryVideo.copy(alpha = 0.12f),
+                    iconTintColor = colors.categoryVideo,
                     isRadio = true
                 )
 
@@ -305,28 +314,34 @@ fun RestorePreviewScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { folderPickerLauncher.launch(null) },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = RoundedCornerShape(RadiusSm),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp)
                     ) {
-                        Text(if (customFolderLabel != null) "Change Folder ($customFolderLabel)" else "Choose Target Folder")
+                        Text(
+                            text = if (customFolderLabel != null) "Change folder ($customFolderLabel)" else "Choose target folder",
+                            style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = colors.dock
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Conflict Policy Selector
+            // Conflict Policy Selector (SCREENS.md S14: Keep both · Skip · Overwrite)
             item {
                 Text(
-                    "IF A FILE ALREADY EXISTS ON PHONE",
+                    "IF A FILE ALREADY EXISTS",
                     style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                     color = colors.textTertiary
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
                 DockSelectableCard(
-                    title = "Keep both (Recommended)",
-                    subtitle = "Appends (1) to restored file so nothing is overwritten.",
+                    title = "Keep both",
+                    subtitle = "Adds (1) to the restored filename so nothing is lost.",
                     selected = conflictPolicy == ConflictPolicy.KEEP_BOTH,
                     onClick = { conflictPolicy = ConflictPolicy.KEEP_BOTH },
                     icon = Icons.Outlined.ContentCopy,
@@ -339,8 +354,8 @@ fun RestorePreviewScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 DockSelectableCard(
-                    title = "Skip existing",
-                    subtitle = "Does not overwrite files that already exist on your phone.",
+                    title = "Skip",
+                    subtitle = "Leaves existing files on your phone untouched.",
                     selected = conflictPolicy == ConflictPolicy.SKIP,
                     onClick = { conflictPolicy = ConflictPolicy.SKIP },
                     icon = Icons.Outlined.SkipNext,
@@ -352,14 +367,14 @@ fun RestorePreviewScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 DockSelectableCard(
-                    title = "Overwrite existing (Caution)",
-                    subtitle = "Replaces local file with the version from your SSD.",
+                    title = "Overwrite",
+                    subtitle = "Replaces the file on your phone with the backup copy.",
                     selected = conflictPolicy == ConflictPolicy.OVERWRITE,
                     onClick = { conflictPolicy = ConflictPolicy.OVERWRITE },
                     icon = Icons.Outlined.Warning,
                     iconBgColor = colors.danger.copy(alpha = 0.12f),
                     iconTintColor = colors.danger,
-                    trailingBadge = "Destructive",
+                    trailingBadge = "Replaces files",
                     isRadio = true
                 )
 
@@ -368,14 +383,14 @@ fun RestorePreviewScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = if (p.conflictCount > 0) {
-                            "⚡ ${p.conflictCount} conflicts detected in target destination"
+                            String.format(Locale.US, "%,d files already exist in destination", p.conflictCount)
                         } else {
-                            "✓ No filename conflicts found in destination"
+                            "No conflicting files found in destination"
                         },
                         style = DockMono.copy(
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (p.conflictCount > 0) colors.attention else colors.seal
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (p.conflictCount > 0) colors.attentionText else colors.textSecondary
                         )
                     )
                 }
@@ -383,22 +398,22 @@ fun RestorePreviewScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Permission Gaps
+            // Permissions Needed (SCREENS.md S14)
             val p = plan
             if (p != null && p.permissionGaps.isNotEmpty()) {
                 item {
                     Text(
                         "PERMISSIONS NEEDED",
                         style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                        color = colors.attention
+                        color = colors.attentionText
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .border(1.dp, colors.attention.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
-                        colors = CardDefaults.cardColors(containerColor = colors.attention.copy(alpha = 0.05f))
+                            .clip(RoundedCornerShape(RadiusMd))
+                            .border(1.dp, colors.attention.copy(alpha = 0.5f), RoundedCornerShape(RadiusMd)),
+                        colors = CardDefaults.cardColors(containerColor = colors.attention.copy(alpha = 0.08f))
                     ) {
                         Column {
                             p.permissionGaps.forEachIndexed { idx, gap ->
@@ -411,12 +426,12 @@ fun RestorePreviewScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            "${gap.folderLabel} Folder",
+                                            "${gap.folderLabel} folder",
                                             style = DockBody.copy(fontWeight = FontWeight.Bold),
                                             color = colors.textPrimary
                                         )
                                         Text(
-                                            "${gap.fileCount} files · ${formatBytes(gap.totalBytes)}",
+                                            String.format(Locale.US, "%,d files · %s", gap.fileCount, formatBytes(gap.totalBytes)),
                                             style = DockBodySmall,
                                             color = colors.textSecondary
                                         )
@@ -426,10 +441,14 @@ fun RestorePreviewScreen(
                                             activeGrantingFolder = gap.folderLabel
                                             folderPickerLauncher.launch(null)
                                         },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colors.dock)
+                                        modifier = Modifier.defaultMinSize(minHeight = 48.dp),
+                                        shape = RoundedCornerShape(RadiusSm),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = colors.dock,
+                                            contentColor = colors.onDock
+                                        )
                                     ) {
-                                        Text("Grant Access", style = DockBodySmall.copy(fontWeight = FontWeight.SemiBold))
+                                        Text("Grant", style = DockBodySmall.copy(fontWeight = FontWeight.Bold))
                                     }
                                 }
                                 if (idx < p.permissionGaps.size - 1) {
@@ -442,10 +461,10 @@ fun RestorePreviewScreen(
                 }
             }
 
-            // Space Preflight Row
+            // Space Check Row (SCREENS.md S14: "Needs {size}, {free} free on your phone ✓" — amber if not)
             item {
                 Text(
-                    "PHONE STORAGE CHECK",
+                    "SPACE CHECK",
                     style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
                     color = colors.textTertiary
                 )
@@ -459,14 +478,14 @@ fun RestorePreviewScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(RadiusMd))
                         .border(
                             1.dp,
-                            if (enough) colors.seal.copy(alpha = 0.5f) else colors.danger.copy(alpha = 0.5f),
-                            RoundedCornerShape(18.dp)
+                            if (enough) colors.outline.copy(alpha = 0.6f) else colors.attention.copy(alpha = 0.6f),
+                            RoundedCornerShape(RadiusMd)
                         ),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (enough) colors.seal.copy(alpha = 0.05f) else colors.danger.copy(alpha = 0.05f)
+                        containerColor = if (enough) colors.surface else colors.attention.copy(alpha = 0.08f)
                     )
                 ) {
                     Row(
@@ -476,18 +495,26 @@ fun RestorePreviewScreen(
                         Icon(
                             imageVector = if (enough) Icons.Outlined.CheckCircle else Icons.Outlined.Warning,
                             contentDescription = null,
-                            tint = if (enough) colors.seal else colors.danger,
+                            tint = if (enough) colors.dock else colors.attentionText,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Needs ${formatBytes(needBytes)} · ${formatBytes(phoneFree)} free on phone",
+                                text = if (enough) {
+                                    "Needs ${formatBytes(needBytes)}, ${formatBytes(phoneFree)} free on your phone ✓"
+                                } else {
+                                    "Needs ${formatBytes(needBytes)}, ${formatBytes(phoneFree)} free on your phone"
+                                },
                                 style = DockBody.copy(fontWeight = FontWeight.Bold),
-                                color = if (enough) colors.textPrimary else colors.danger
+                                color = if (enough) colors.textPrimary else colors.attentionText
                             )
                             Text(
-                                text = if (enough) "Sufficient internal storage available" else "Free up space on your device before starting restore",
+                                text = if (enough) {
+                                    "Enough free space on your phone"
+                                } else {
+                                    "Free up space on your phone or select fewer files"
+                                },
                                 style = DockBodySmall,
                                 color = colors.textSecondary
                             )
@@ -502,5 +529,5 @@ fun RestorePreviewScreen(
 
 private fun formatBytes(bytes: Long): String {
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
-    return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
+    return if (gb >= 1.0) String.format(Locale.US, "%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
 }

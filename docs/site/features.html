@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Features — DockDrop</title>
+  <meta name="description" content="Explore all DockDrop features: verified backups, offline-first design, resume on interrupt, restore browser, encryption, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg class="nav-icon" viewBox="0 0 40 40" fill="none"><rect x="10" y="14" width="20" height="22" rx="5" stroke="#4F8CFF" stroke-width="2.5"/><rect x="16" y="28" width="8" height="3" rx="1.5" fill="#4F8CFF"/><line x1="20" y1="6" x2="20" y2="14" stroke="#4F8CFF" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="nav-wordmark">DockDrop</span>
+      </a>
+      <div class="nav-links">
+        <a href="features.html" style="color:var(--text-primary)">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <a href="index.html#download" class="btn btn-sm btn-primary">Get the app</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    </div>
+    <div class="nav-mobile" id="navMobile">
+      <a href="features.html">Features</a>
+      <a href="how-it-works.html">How it works</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="faq.html">FAQ</a>
+      <a href="index.html#download" class="btn btn-primary">Get the app</a>
+    </div>
+  </nav>
+
+  <!-- Page Hero -->
+  <section class="section page-hero" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79,140,255,0.08) 0%, transparent 70%);">
+    <div class="container">
+      <div class="section-label">Features</div>
+      <h1 class="section-title">Everything DockDrop does.<br />Nothing it doesn&rsquo;t.</h1>
+      <p class="section-sub" style="margin: 16px auto 0;">Built to be the backup you trust, not just the one you use.</p>
+    </div>
+  </section>
+
+  <!-- Feature: Backup Core -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">Backup</div>
+      <h2 class="section-title" style="margin-bottom:48px">The backup engine</h2>
+      <div class="features-grid">
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap seal-bg">&#10003;</div>
+          <h3 class="feature-title">Verified Seal</h3>
+          <p class="feature-desc">Every Drop ends with SHA-256 hash verification. Only when every file passes does the receipt say <span class="sealed-word">Sealed</span>. The verification level used is always named explicitly &mdash; no vague &ldquo;backup complete.&rdquo;</p>
+          <div class="feature-chip">size + SHA-256 on copy + re-read</div>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#9889;</div>
+          <h3 class="feature-title">Live progress</h3>
+          <p class="feature-desc">Watch your backup folder by folder. Real MB/s speed, per-folder ETAs, file counts. The display doesn&rsquo;t show fake progress &mdash; if it stalls, it says so.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap teal-icon">&#8635;</div>
+          <h3 class="feature-title">Resume on interrupt</h3>
+          <p class="feature-desc">Pull the cable mid-backup. Plug back in. DockDrop reads the journal and resumes exactly where it stopped. No duplicates. No corruption. The final result is byte-identical.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap purple-icon">&#8801;</div>
+          <h3 class="feature-title">Backup Sets</h3>
+          <p class="feature-desc">Create named groups of folders &mdash; &ldquo;My Phone&rdquo;, &ldquo;Work Docs&rdquo;, &ldquo;Videos&rdquo;. Each Set has its own policy: deletion handling, optional encryption, battery threshold. One tap backs up all of them.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#9679;</div>
+          <h3 class="feature-title">Smart defaults</h3>
+          <p class="feature-desc">Camera, Pictures, WhatsApp Media, Documents &mdash; pre-suggested with size estimates. Deletion policy defaults to &ldquo;keep&rdquo;. Battery threshold defaults to 20%. Encryption is off until you choose it.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#128274;</div>
+          <h3 class="feature-title">Keeps deletions by default</h3>
+          <p class="feature-desc">When you delete a file on your phone, DockDrop moves it to <code>_deleted/</code> on the SSD instead of removing it. A mass-delete guard stops Mirror mode if &gt;20% or &gt;500 files would be removed in one run.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature: Restore -->
+  <section class="section" style="background: linear-gradient(180deg, transparent, rgba(52,211,153,0.03), transparent);">
+    <div class="container">
+      <div class="section-label">Restore</div>
+      <h2 class="section-title" style="margin-bottom:48px">Restore is first-class</h2>
+      <div class="features-grid">
+        <div class="feature-card glass-card feature-card-lg reveal">
+          <div class="feature-icon-wrap seal-bg">&#8635;</div>
+          <h3 class="feature-title">Hold to restore everything</h3>
+          <p class="feature-desc">Press and hold the &ldquo;Restore everything&rdquo; button for 1.2 seconds. That&rsquo;s your only confirmation. No stacked &ldquo;Are you sure?&rdquo; dialogs. Friction is proportional to risk.</p>
+          <p class="feature-desc" style="margin-top:10px">You&rsquo;ll see a preview first: how many files, how much space needed, how conflicts are handled. Then you hold.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap teal-icon">&#128461;</div>
+          <h3 class="feature-title">Browse &amp; restore selectively</h3>
+          <p class="feature-desc">Navigate your backup as a folder tree. Search by name. Filter by photos, videos, documents, or deleted files. Restore a single file or a whole folder.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap purple-icon">&#128242;</div>
+          <h3 class="feature-title">New-phone restore</h3>
+          <p class="feature-desc">Install DockDrop on a new phone, plug in your SSD, and it detects your backup automatically. Maps source folders, grants permissions folder by folder, then restores.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#128203;</div>
+          <h3 class="feature-title">Restore receipt</h3>
+          <p class="feature-desc">After every restore, you get a receipt: files restored, conflicts kept-both, failures (if any). SHA-256 verified against your backup. Same trust, in both directions.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#128270;</div>
+          <h3 class="feature-title">Test restore drill</h3>
+          <p class="feature-desc">Restore 10 random files to a temporary folder to verify your backup works &mdash; before you actually need it. The verification result tells you if hashes match.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#128195;</div>
+          <h3 class="feature-title">No-app restore</h3>
+          <p class="feature-desc">Unencrypted backups are plain folders on your SSD. You can restore them on any laptop using a file manager, with no DockDrop required. Format is documented.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature: Privacy & Trust -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">Privacy &amp; Trust</div>
+      <h2 class="section-title" style="margin-bottom:16px">Trust by design</h2>
+      <p class="section-sub" style="margin-bottom:48px">Not promises &mdash; architecture.</p>
+      <div class="features-grid">
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#128274;</div>
+          <h3 class="feature-title">Zero network permissions</h3>
+          <p class="feature-desc">No INTERNET. No ACCESS_NETWORK_STATE. Enforced by CI &mdash; the build fails if either appears. Verifiable: Settings &rarr; Apps &rarr; DockDrop &rarr; Permissions.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap seal-bg">&#8801;</div>
+          <h3 class="feature-title">Open, versioned format</h3>
+          <p class="feature-desc">Plain folders under a documented directory tree. The manifest is versioned NDJSON with a commit protocol. No proprietary format, no encryption-by-default lock-in.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap purple-icon">&#128272;</div>
+          <h3 class="feature-title">Optional encryption (AES-256)</h3>
+          <p class="feature-desc">Per-Set AES-256-GCM encryption, scrypt/Argon2id key derivation. Passphrase + recovery key required. If you lose both, the backup cannot be opened &mdash; we tell you that upfront.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap">&#128203;</div>
+          <h3 class="feature-title">Atomic commit protocol</h3>
+          <p class="feature-desc">No file exists under its final name until fully written. The manifest HEAD pointer is only updated after the new generation passes checksum. A crash at any point leaves the previous generation intact.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap attn-icon">&#9888;</div>
+          <h3 class="feature-title">Read-only source</h3>
+          <p class="feature-desc">DockDrop never modifies or deletes anything on your phone. Ever. Restore only writes to a destination you confirm on the preview screen. Your phone is always the source of truth.</p>
+        </div>
+        <div class="feature-card glass-card reveal">
+          <div class="feature-icon-wrap teal-icon">&#128196;</div>
+          <h3 class="feature-title">Log export</h3>
+          <p class="feature-desc">Export a plain-text log manually via the system share sheet. No remote logging, no crash-reporting SDK. If you need to file a bug, you share the log yourself.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshots -->
+  <section class="section">
+    <div class="container">
+      <div class="section-label">App screens</div>
+      <h2 class="section-title" style="margin-bottom:48px">Calm when idle.<br />Vivid when something&rsquo;s happening.</h2>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px;">
+        <div class="glass-card" style="overflow:hidden; border-radius:28px; reveal">
+          <img src="assets/images/DockDrop SSD Backup Dashboard.png" alt="DockDrop Home screen" style="width:100%; display:block;" />
+        </div>
+        <div class="glass-card" style="overflow:hidden; border-radius:28px; reveal">
+          <img src="assets/images/Minimal Restore Progress Screen.png" alt="DockDrop Restore progress" style="width:100%; display:block;" />
+        </div>
+        <div class="glass-card" style="overflow:hidden; border-radius:28px; reveal">
+          <img src="assets/images/DockDrop Settings Screen.png" alt="DockDrop Settings" style="width:100%; display:block;" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section download-section" id="download" style="padding-top:40px">
+    <div class="container">
+      <div class="download-inner glass-card" style="grid-template-columns:1fr; text-align:center; padding:60px 48px;">
+        <div class="orb orb-dl"></div>
+        <div>
+          <h2 class="section-title" style="margin-bottom:12px">Ready to trust your backups?</h2>
+          <p class="section-sub" style="margin: 0 auto 32px;">Free. Offline. Verified.</p>
+          <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+            <a href="#" class="btn btn-primary btn-lg">Download for Android</a>
+            <a href="index.html" class="btn btn-ghost btn-lg">Back to home</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Soumya Ranjan Sahoo &middot; <a href="index.html">DockDrop</a> &middot; <a href="https://github.com/i-soumya18/DockDrop/blob/main/LICENSE">Apache 2.0</a></p>
+        <div class="footer-trust-chip">&#128274; Offline by design. Network permission: none.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

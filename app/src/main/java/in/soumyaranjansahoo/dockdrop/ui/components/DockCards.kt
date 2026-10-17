@@ -3,17 +3,18 @@ package `in`.soumyaranjansahoo.dockdrop.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,9 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBodySmall
+import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockLabel
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 
 /**
@@ -55,20 +60,30 @@ fun DockSelectableCard(
 ) {
     val colors = DockTheme.colors
 
-    val targetBorderColor = if (selected) colors.dock else colors.outline.copy(alpha = 0.5f)
+    val targetBorderColor = if (selected) colors.dock else colors.outline.copy(alpha = 0.6f)
     val borderColor by animateColorAsState(targetValue = targetBorderColor, label = "cardBorder")
 
-    val targetContainerColor = if (selected) colors.surfaceRaised.copy(alpha = 0.6f) else colors.surface
+    val targetContainerColor = if (selected) colors.surfaceRaised else colors.surface
     val containerColor by animateColorAsState(targetValue = targetContainerColor, label = "cardBg")
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
             .clip(RoundedCornerShape(16.dp))
             .border(if (selected) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(16.dp))
-            .clickable { onClick() },
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = if (isRadio) Role.RadioButton else Role.Checkbox
+            ),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 1.dp else 0.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            focusedElevation = 0.dp,
+            hoveredElevation = 0.dp
+        )
     ) {
         Row(
             modifier = Modifier
@@ -98,8 +113,7 @@ fun DockSelectableCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = DockBody.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
                         color = colors.textPrimary
                     )
                     if (trailingBadge != null) {
@@ -112,8 +126,7 @@ fun DockSelectableCard(
                         ) {
                             Text(
                                 text = trailingBadge,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                style = DockLabel.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
                                 color = colors.dock
                             )
                         }
@@ -122,9 +135,8 @@ fun DockSelectableCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 13.sp,
-                    color = colors.textSecondary,
-                    lineHeight = 18.sp
+                    style = DockBodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                    color = colors.textSecondary
                 )
             }
 
@@ -133,7 +145,7 @@ fun DockSelectableCard(
             if (isRadio) {
                 RadioButton(
                     selected = selected,
-                    onClick = onClick,
+                    onClick = null, // Parent .selectable handles click & accessibility
                     colors = RadioButtonDefaults.colors(
                         selectedColor = colors.dock,
                         unselectedColor = colors.outline
@@ -155,7 +167,7 @@ fun DockSelectableCard(
                     if (selected) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
+                            contentDescription = null, // Decorative within .selectable Checkbox
                             tint = colors.onDock,
                             modifier = Modifier.size(14.dp)
                         )
