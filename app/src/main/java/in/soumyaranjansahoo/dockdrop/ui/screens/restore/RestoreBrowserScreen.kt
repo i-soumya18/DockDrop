@@ -24,11 +24,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
@@ -493,7 +493,7 @@ private fun getFileTypeMeta(path: String): Triple<ImageVector, Color, Color> {
             Color(0xFFF59E0B).copy(alpha = 0.12f)
         )
         else -> Triple(
-            Icons.Outlined.InsertDriveFile,
+            Icons.AutoMirrored.Outlined.InsertDriveFile,
             Color(0xFF64748B),
             Color(0xFF64748B).copy(alpha = 0.12f)
         )

@@ -1,11 +1,17 @@
 package `in`.soumyaranjansahoo.dockdrop.ui.screens.detail
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -30,6 +37,7 @@ import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,11 +61,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 import `in`.soumyaranjansahoo.dockdrop.core.model.DeletionPolicy
 import `in`.soumyaranjansahoo.dockdrop.core.model.SetDefinition
+import `in`.soumyaranjansahoo.dockdrop.core.model.SourceFolder
 import `in`.soumyaranjansahoo.dockdrop.core.repository.SetRepository
 import `in`.soumyaranjansahoo.dockdrop.ui.components.DockTopAppBar
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockBody
@@ -68,6 +79,7 @@ import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTheme
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.DockTitle
 import `in`.soumyaranjansahoo.dockdrop.ui.theme.RadiusMd
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 @Composable
 fun SetDetailScreen(
@@ -79,12 +91,169 @@ fun SetDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = DockTheme.colors
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sourceFolders by setRepository.getSourceFolders(set.id).collectAsState(initial = emptyList())
 
     var isEditingName by remember { mutableStateOf(false) }
     var currentName by remember { mutableStateOf(set.name) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    var folderToDelete by remember { mutableStateOf<SourceFolder?>(null) }
+    var showAddFolderNamingDialog by remember { mutableStateOf(false) }
+    var pendingAddFolderUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingAddFolderName by remember { mutableStateOf("") }
+
+    val addFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (_: Exception) {}
+            }
+
+            val docFile = DocumentFile.fromTreeUri(context, uri)
+            val detectedName = docFile?.name?.ifBlank { null }
+                ?: try {
+                    DocumentsContract.getTreeDocumentId(uri).substringAfterLast(':').substringAfterLast('/')
+                } catch (_: Exception) {
+                    "Custom Folder"
+                }
+
+            pendingAddFolderUri = uri
+            pendingAddFolderName = detectedName.ifBlank { "Custom Folder" }
+            showAddFolderNamingDialog = true
+        }
+    }
+
+    if (showAddFolderNamingDialog && pendingAddFolderUri != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddFolderNamingDialog = false
+                pendingAddFolderUri = null
+            },
+            title = {
+                Text("Add Protected Folder", style = DockHeadline)
+            },
+            text = {
+                Column {
+                    Text(
+                        "Give this folder a descriptive label in this backup set:",
+                        style = DockBodySmall,
+                        color = colors.textSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = pendingAddFolderName,
+                        onValueChange = { pendingAddFolderName = it },
+                        label = { Text("Folder Label") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.dock,
+                            focusedLabelColor = colors.dock,
+                            cursorColor = colors.dock
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = pendingAddFolderName.trim().ifBlank { "Custom Folder" }
+                        val uri = pendingAddFolderUri!!
+                        scope.launch {
+                            setRepository.addSourceFolder(
+                                SourceFolder(
+                                    id = UUID.randomUUID().toString(),
+                                    setId = set.id,
+                                    label = name,
+                                    treeUriString = uri.toString()
+                                )
+                            )
+                        }
+                        showAddFolderNamingDialog = false
+                        pendingAddFolderUri = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.dock),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Add Folder", color = colors.onDock)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddFolderNamingDialog = false
+                        pendingAddFolderUri = null
+                    }
+                ) {
+                    Text("Cancel", color = colors.textTertiary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    if (folderToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { folderToDelete = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = null,
+                    tint = colors.danger,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text("Remove Protected Folder?", style = DockHeadline)
+            },
+            text = {
+                Text(
+                    "Are you sure you want to remove \"${folderToDelete?.label}\" from this backup set? Previously backed up files on the SSD will not be deleted.",
+                    style = DockBody,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = folderToDelete
+                        if (target != null) {
+                            scope.launch {
+                                setRepository.removeSourceFolder(target.id)
+                            }
+                        }
+                        folderToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.danger),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Remove", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { folderToDelete = null }) {
+                    Text("Cancel", color = colors.textTertiary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
 
     Scaffold(
         containerColor = colors.bg,
@@ -210,27 +379,51 @@ fun SetDetailScreen(
                 colors = CardDefaults.cardColors(containerColor = colors.surface)
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(colors.dock.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Folder,
-                                contentDescription = null,
-                                tint = colors.dock,
-                                modifier = Modifier.size(20.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(colors.dock.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Folder,
+                                    contentDescription = null,
+                                    tint = colors.dock,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "PROTECTED FOLDERS (${sourceFolders.size})",
+                                style = DockMono.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textTertiary
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "PROTECTED FOLDERS (${sourceFolders.size})",
-                            style = DockMono.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                            color = colors.textTertiary
-                        )
+
+                        TextButton(
+                            onClick = { addFolderLauncher.launch(null) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = null,
+                                tint = colors.dock,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "Add Folder",
+                                style = DockBodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = colors.dock
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -244,21 +437,41 @@ fun SetDetailScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(colors.surfaceRaised)
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(start = 12.dp, top = 6.dp, end = 6.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(colors.dock)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = folder.label,
-                                    style = DockBody.copy(fontWeight = FontWeight.Medium),
-                                    color = colors.textPrimary
-                                )
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(colors.dock)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = folder.label,
+                                        style = DockBody.copy(fontWeight = FontWeight.Medium),
+                                        color = colors.textPrimary
+                                    )
+                                }
+
+                                if (sourceFolders.size > 1) {
+                                    IconButton(
+                                        onClick = { folderToDelete = folder },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = "Remove ${folder.label}",
+                                            tint = colors.textTertiary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                         }

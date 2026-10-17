@@ -38,6 +38,14 @@ open class SetRepository(
         setDao.insertSourceFolders(folders.map { SourceFolderEntity.fromDomain(it) })
     }
 
+    suspend fun addSourceFolder(folder: SourceFolder) {
+        setDao.insertSourceFolder(SourceFolderEntity.fromDomain(folder))
+    }
+
+    suspend fun removeSourceFolder(folderId: String) {
+        setDao.deleteSourceFolder(folderId)
+    }
+
     suspend fun updateSetLastStatus(
         setId: String,
         status: String,

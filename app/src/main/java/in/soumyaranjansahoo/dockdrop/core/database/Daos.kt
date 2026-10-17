@@ -33,6 +33,12 @@ interface SetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSourceFolders(folders: List<SourceFolderEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSourceFolder(folder: SourceFolderEntity)
+
+    @Query("DELETE FROM source_folders WHERE id = :folderId")
+    suspend fun deleteSourceFolder(folderId: String): Int
+
     @Query("DELETE FROM source_folders WHERE setId = :setId")
     suspend fun deleteSourceFoldersForSet(setId: String): Int
 

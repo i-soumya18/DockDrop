@@ -233,13 +233,13 @@ fun WelcomeScreen(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFDCFCE7)),
+                            .background(if (colors.isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = Color(0xFF15803D),
+                            tint = if (colors.isDark) Color(0xFF86EFAC) else Color(0xFF15803D),
                             modifier = Modifier.size(20.dp)
                         )
                     }

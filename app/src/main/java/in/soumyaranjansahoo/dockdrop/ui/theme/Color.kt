@@ -49,7 +49,8 @@ data class DockColors(
     val onDock: Color,
     val seal: Color,
     val attention: Color,
-    val danger: Color
+    val danger: Color,
+    val isDark: Boolean = true
 )
 
 val LocalDockColors = staticCompositionLocalOf {
@@ -65,6 +66,7 @@ val LocalDockColors = staticCompositionLocalOf {
         onDock = DarkOnDock,
         seal = DarkSeal,
         attention = DarkAttention,
-        danger = DarkDanger
+        danger = DarkDanger,
+        isDark = true
     )
 }

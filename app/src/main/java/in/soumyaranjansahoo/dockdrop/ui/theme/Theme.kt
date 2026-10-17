@@ -57,7 +57,8 @@ fun DockDropTheme(
             onDock = DarkOnDock,
             seal = DarkSeal,
             attention = DarkAttention,
-            danger = DarkDanger
+            danger = DarkDanger,
+            isDark = true
         )
     } else {
         DockColors(
@@ -72,7 +73,8 @@ fun DockDropTheme(
             onDock = LightOnDock,
             seal = LightSeal,
             attention = LightAttention,
-            danger = LightDanger
+            danger = LightDanger,
+            isDark = false
         )
     }
 

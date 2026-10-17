@@ -25,9 +25,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SkipNext
@@ -295,7 +295,7 @@ fun RestorePreviewScreen(
                             folderPickerLauncher.launch(null)
                         }
                     },
-                    icon = Icons.Outlined.DriveFileMove,
+                    icon = Icons.AutoMirrored.Outlined.DriveFileMove,
                     iconBgColor = Color(0xFF6366F1).copy(alpha = 0.12f),
                     iconTintColor = Color(0xFF6366F1),
                     isRadio = true

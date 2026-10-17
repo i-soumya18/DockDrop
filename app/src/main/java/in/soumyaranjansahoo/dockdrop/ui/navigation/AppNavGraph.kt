@@ -306,8 +306,20 @@ fun AppNavGraph(
 
         composable(Routes.KEEP_ALIVE) {
             KeepAliveScreen(
-                onDoneClick = { navController.popBackStack() },
-                onRemindMeLaterClick = { navController.popBackStack() }
+                onDoneClick = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                },
+                onRemindMeLaterClick = {
+                    if (!navController.popBackStack()) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
 
@@ -361,11 +373,14 @@ fun AppNavGraph(
                 },
                 onNavigateToHome = {
                     navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.HOME) { inclusive = true }
+                        popUpTo(Routes.HOME) { inclusive = false }
+                        launchSingleTop = true
                     }
                 },
                 onNavigateToSettings = {
-                    navController.navigate(Routes.KEEP_ALIVE)
+                    navController.navigate(Routes.SETTINGS) {
+                        launchSingleTop = true
+                    }
                 },
                 encryptedSetManager = container.encryptedSetManager,
                 onPromptUnlock = { backup ->

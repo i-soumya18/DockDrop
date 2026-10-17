@@ -21,8 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -398,7 +398,7 @@ fun RestoreHubScreen(
                             ActionRow(
                                 title = "Restore to a custom folder",
                                 subtitle = "Extract backup into a single folder of your choice",
-                                icon = Icons.Outlined.DriveFileMove,
+                                icon = Icons.AutoMirrored.Outlined.DriveFileMove,
                                 iconColor = Color(0xFF6366F1),
                                 onClick = {
                                     if (activeSet != null) onNavigateToCustomFolderRestore(activeSet)

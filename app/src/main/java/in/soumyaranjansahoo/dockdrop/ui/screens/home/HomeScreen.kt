@@ -27,6 +27,8 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -429,16 +431,19 @@ fun HomeScreen(
             }
 
             // 5. Sets List
-            val displaySets = if (sets.isNotEmpty()) sets else getMockSetsFallback()
-            items(displaySets) { set ->
-                MockupSetCard(
-                    set = set,
-                    onClick = {
-                        val realSet = sets.find { it.id == set.id }
-                        if (realSet != null) onSetClick(realSet) else onCreateSetClick()
-                    }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+            if (sets.isEmpty()) {
+                item {
+                    EmptySetsCard(onCreateSetClick = onCreateSetClick)
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            } else {
+                items(sets) { set ->
+                    RealSetCard(
+                        set = set,
+                        onClick = { onSetClick(set) }
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
 
             // 6. SSD Storage Card (matching mockup bottom card)
@@ -525,40 +530,126 @@ fun HomeScreen(
 }
 
 @Composable
-private fun MockupSetCard(
+private fun EmptySetsCard(
+    onCreateSetClick: () -> Unit
+) {
+    val colors = DockTheme.colors
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, colors.outline.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.dock.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = colors.dock,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "No backup sets yet",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Choose folders like Camera, Downloads, or Documents to safeguard on your external SSD.",
+                fontSize = 13.sp,
+                color = colors.textSecondary,
+                lineHeight = 18.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onCreateSetClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.dock,
+                    contentColor = colors.onDock
+                ),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Text(
+                    text = "+ Create Backup Set",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RealSetCard(
     set: SetDefinition,
     onClick: () -> Unit
 ) {
     val colors = DockTheme.colors
 
-    // Derive icon style based on set name (mockup has Phone: Photo icon, Study & Work: Folder, Videos: Play)
     val (iconBg, iconTint, icon) = when {
+        set.isEncrypted -> {
+            Triple(colors.seal.copy(alpha = 0.12f), colors.seal, Icons.Outlined.Lock)
+        }
         set.name.contains("Video", ignoreCase = true) || set.name.contains("Movie", ignoreCase = true) -> {
-            Triple(Color(0xFFF5F3FF), Color(0xFF8B5CF6), Icons.Outlined.PlayCircle)
+            Triple(
+                if (colors.isDark) Color(0xFF2E1065).copy(alpha = 0.5f) else Color(0xFFF5F3FF),
+                Color(0xFF8B5CF6),
+                Icons.Outlined.PlayCircle
+            )
         }
         set.name.contains("Work", ignoreCase = true) || set.name.contains("Study", ignoreCase = true) || set.name.contains("Doc", ignoreCase = true) -> {
-            Triple(Color(0xFFECFDF5), Color(0xFF10B981), Icons.Outlined.Folder)
+            Triple(
+                if (colors.isDark) Color(0xFF064E3B).copy(alpha = 0.5f) else Color(0xFFECFDF5),
+                Color(0xFF10B981),
+                Icons.Outlined.Folder
+            )
         }
         else -> {
-            Triple(Color(0xFFEFF6FF), Color(0xFF2563EB), Icons.Outlined.Image)
+            Triple(
+                if (colors.isDark) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFEFF6FF),
+                Color(0xFF2563EB),
+                Icons.Outlined.Image
+            )
         }
     }
 
-    val subtitle = when {
-        set.name.contains("Phone", ignoreCase = true) -> "Camera, WhatsApp, Documents"
-        set.name.contains("Study", ignoreCase = true) -> "Documents, Downloads"
-        set.name.contains("Video", ignoreCase = true) -> "Movies, Screen recordings"
-        else -> "Dock: ${set.dockUserLabel}"
-    }
+    val subtitle = if (set.dockUserLabel.isNotBlank()) "Target: ${set.dockUserLabel}" else "External SSD vault"
 
     val isSealed = set.lastStatus == "Sealed"
     val sealedStatusText = when {
         set.lastSealedMs != null -> {
-            val daysAgo = ((System.currentTimeMillis() - set.lastSealedMs) / (1000 * 60 * 60 * 24)).coerceAtLeast(1)
-            val filesStr = if (set.lastSealedFiles > 0) "${set.lastSealedFiles} files" else "326 files"
-            "Last sealed $daysAgo days ago · $filesStr"
+            val daysAgo = ((System.currentTimeMillis() - set.lastSealedMs) / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
+            val timeAgo = if (daysAgo == 0L) "today" else "$daysAgo days ago"
+            val filesStr = if (set.lastSealedFiles > 0) " · ${set.lastSealedFiles} files" else ""
+            "Last sealed $timeAgo$filesStr"
         }
-        isSealed -> "Last sealed 3 days ago · 1,248 files"
+        isSealed -> "Sealed · verified"
+        set.lastStatus == "Partial" -> "Partial backup completed"
         else -> "Not yet backed up"
     }
 
@@ -577,7 +668,6 @@ private fun MockupSetCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon container squircle
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -627,9 +717,9 @@ private fun MockupSetCard(
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(10.dp)
                             .clip(CircleShape)
-                            .background(colors.textTertiary.copy(alpha = 0.7f))
+                            .background(colors.textTertiary.copy(alpha = 0.6f))
                     )
                 }
 
@@ -650,17 +740,10 @@ private fun MockupSetCard(
 private fun SsdStorageCard(dropState: DropState) {
     val colors = DockTheme.colors
 
-    val (totalText, usedText, freeText, progress) = when (dropState) {
-        is DropState.DockDetected -> {
-            val total = dropState.dock.totalBytes
-            val free = dropState.dock.freeBytes
-            val used = (total - free).coerceAtLeast(0L)
-            val pct = if (total > 0) (used.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0.92f
-            Quad(formatGb(total) + " total", formatGb(used) + " used", formatGb(free) + " free", pct)
-        }
-        else -> {
-            Quad("409 GB total", "377 GB used", "3.1 GB free", 377f / 409f)
-        }
+    val dockInfo = when (dropState) {
+        is DropState.DockDetected -> dropState.dock
+        is DropState.AwaitingConfirm -> dropState.dock
+        else -> null
     }
 
     Card(
@@ -671,77 +754,122 @@ private fun SsdStorageCard(dropState: DropState) {
         colors = CardDefaults.cardColors(containerColor = colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.PhoneAndroid,
-                contentDescription = "Storage",
-                tint = colors.textPrimary,
-                modifier = Modifier.size(24.dp)
-            )
+        if (dockInfo != null) {
+            val total = dockInfo.totalBytes
+            val free = dockInfo.freeBytes
+            val used = (total - free).coerceAtLeast(0L)
+            val progress = if (total > 0) (used.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PhoneAndroid,
+                    contentDescription = "Storage",
+                    tint = colors.textPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${dockInfo.userLabel} (${dockInfo.filesystem})",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "${formatGb(total)} total",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(7.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = colors.dock,
+                        trackColor = colors.surfaceRaised,
+                        strokeCap = StrokeCap.Round
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${formatGb(used)} used",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                        Text(
+                            text = "${formatGb(free)} available",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.surfaceRaised),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Storage,
+                        contentDescription = "Storage",
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "SSD storage",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.textPrimary
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = totalText,
+                        text = "Plug in your USB-C portable SSD to view available capacity and start backing up.",
                         fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(7.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = colors.dock,
-                    trackColor = colors.surfaceRaised,
-                    strokeCap = StrokeCap.Round
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = usedText,
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
-                    Text(
-                        text = freeText,
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
+                        color = colors.textSecondary,
+                        lineHeight = 16.sp
                     )
                 }
             }
         }
     }
 }
-
-private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
 private fun formatGb(bytes: Long): String {
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
@@ -752,13 +880,13 @@ private fun getHeroHeadlineAndSubline(state: DropState, sets: List<SetDefinition
     return when (state) {
         is DropState.NoDock -> {
             if (sets.isEmpty()) {
-                Pair("SSD connected", "3.1 GB free · exFAT")
+                Pair("Welcome to DockDrop", "Zero cloud, zero internet — physical SSD backup")
             } else {
-                Pair("SSD connected", "3.1 GB free · exFAT")
+                Pair("No SSD connected", "Plug in your portable drive to start")
             }
         }
-        is DropState.DockDetected -> Pair("SSD connected", "${formatBytes(state.dock.freeBytes)} free · ${state.dock.filesystem}")
-        is DropState.AwaitingConfirm -> Pair("SSD connected", "${state.dock.filesystem} · ${state.plannedFiles} planned files")
+        is DropState.DockDetected -> Pair("${state.dock.userLabel} connected", "${formatBytes(state.dock.freeBytes)} available · ${state.dock.filesystem}")
+        is DropState.AwaitingConfirm -> Pair("${state.dock.userLabel} connected", "${state.dock.filesystem} · ${state.plannedFiles} planned files")
         is DropState.Preflight -> Pair("Checking your SSD…", "Testing write access")
         is DropState.Dropping -> Pair("Backing up ${state.progress.currentFolder}", "${state.progress.percentage}% · ${state.progress.folderIndex} of ${state.progress.totalFolders}")
         is DropState.Verifying -> Pair("Verifying ${state.currentFolder}", "${state.folderIndex} of ${state.totalFolders} folders")
@@ -778,45 +906,19 @@ private fun getActionCardDetails(state: DropState, activeSet: SetDefinition?): P
         is DropState.Verifying -> Pair("Verifying backup", "Re-reading files for bit-level match")
         is DropState.Sealed -> Pair("Backup complete", "100% verified · safe to unplug")
         is DropState.Resumable -> Pair("Ready to resume", "${state.progress.percentage}% already copied")
-        else -> Pair("Ready to back up", "42 new or changed files · about 4 min")
+        is DropState.DockDetected -> Pair("Ready to back up", "Target drive: ${state.dock.userLabel}")
+        is DropState.NoDock -> {
+            if (activeSet != null) {
+                Pair("Connect your SSD", "Plug in drive to back up ${activeSet.name}")
+            } else {
+                Pair("Get started", "Configure which folders you want to protect")
+            }
+        }
+        else -> Pair("Ready to back up", "Offline physical backup")
     }
 }
 
 private fun formatBytes(bytes: Long): String {
     val gb = bytes.toDouble() / (1024 * 1024 * 1024)
     return if (gb >= 1.0) String.format("%.1f GB", gb) else "${bytes / (1024 * 1024)} MB"
-}
-
-private fun getMockSetsFallback(): List<SetDefinition> {
-    return listOf(
-        SetDefinition(
-            id = "mock-phone",
-            name = "My Phone",
-            dockVolumeUuid = "mock-uuid-1",
-            dockUserLabel = "SSD",
-            destinationVaultUriString = "",
-            lastStatus = null,
-            lastSealedMs = null
-        ),
-        SetDefinition(
-            id = "mock-study",
-            name = "Study & Work",
-            dockVolumeUuid = "mock-uuid-2",
-            dockUserLabel = "SSD",
-            destinationVaultUriString = "",
-            lastStatus = "Sealed",
-            lastSealedMs = System.currentTimeMillis() - 3L * 24 * 60 * 60 * 1000,
-            lastSealedFiles = 1248
-        ),
-        SetDefinition(
-            id = "mock-videos",
-            name = "Videos",
-            dockVolumeUuid = "mock-uuid-3",
-            dockUserLabel = "SSD",
-            destinationVaultUriString = "",
-            lastStatus = "Sealed",
-            lastSealedMs = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000,
-            lastSealedFiles = 326
-        )
-    )
 }

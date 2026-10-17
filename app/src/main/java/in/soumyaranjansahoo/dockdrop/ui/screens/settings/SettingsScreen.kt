@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
@@ -99,6 +100,14 @@ fun SettingsScreen(
     val currentTheme by appPreferences.themeMode.collectAsState()
     val isReduceMotion by appPreferences.reduceMotion.collectAsState()
     val defaultBatteryPct by appPreferences.defaultMinBatteryPct.collectAsState()
+
+    val appVersion = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
+        } catch (e: Exception) {
+            "1.0.1"
+        }
+    }
 
     var showHowToCheckSheet by remember { mutableStateOf(false) }
     var showAboutSheet by remember { mutableStateOf(false) }
@@ -235,6 +244,17 @@ fun SettingsScreen(
                         subtitle = "Configure system alerts for progress and sealed backups",
                         onClick = { openAppNotificationSettings(context) }
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.5f), thickness = 0.8.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsItemRow(
+                        icon = Icons.Outlined.BatteryChargingFull,
+                        title = "Background setup",
+                        subtitle = "Keep backups alive when screen is locked & exempt from battery saver",
+                        onClick = onNavigateToKeepAlive
+                    )
                 }
             }
 
@@ -365,16 +385,23 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 4. PRIVACY SECTION (Soft mint green card matching mockup)
+            // 4. PRIVACY SECTION (Adaptive emerald card matching theme)
             SectionCaption(title = "PRIVACY")
+
+            val isDark = colors.isDark
+            val privacyCardBg = if (isDark) Color(0xFF042414) else Color(0xFFF0FDF4)
+            val privacyBorder = if (isDark) Color(0xFF0F5B34) else Color(0xFFBBF7D0)
+            val privacyIconBg = if (isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)
+            val privacyText = if (isDark) Color(0xFF86EFAC) else Color(0xFF15803D)
+            val privacySubtext = if (isDark) Color(0xFF4ADE80) else Color(0xFF166534)
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, Color(0xFFBBF7D0), RoundedCornerShape(16.dp))
+                    .border(1.dp, privacyBorder, RoundedCornerShape(16.dp))
                     .clickable { showHowToCheckSheet = true },
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                colors = CardDefaults.cardColors(containerColor = privacyCardBg),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
             ) {
                 Row(
@@ -387,13 +414,13 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFDCFCE7)),
+                            .background(privacyIconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = Color(0xFF15803D),
+                            tint = privacyText,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -405,13 +432,13 @@ fun SettingsScreen(
                             text = "Offline by design. Network permission: none",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF15803D)
+                            color = privacyText
                         )
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "DockDrop does not request internet access. Your files never leave your phone and your drive.",
                             fontSize = 12.sp,
-                            color = Color(0xFF166534),
+                            color = privacySubtext,
                             lineHeight = 17.sp
                         )
                     }
@@ -435,7 +462,7 @@ fun SettingsScreen(
                     SettingsItemRow(
                         icon = Icons.Outlined.Info,
                         title = "App version",
-                        subtitle = "1.0.0",
+                        subtitle = appVersion,
                         onClick = { showAboutSheet = true }
                     )
                 }
@@ -462,13 +489,13 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFDCFCE7)),
+                            .background(if (colors.isDark) Color(0xFF0D4327) else Color(0xFFDCFCE7)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
-                            tint = Color(0xFF15803D),
+                            tint = if (colors.isDark) Color(0xFF86EFAC) else Color(0xFF15803D),
                             modifier = Modifier.size(24.dp)
                         )
                     }

@@ -22,14 +22,20 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import android.provider.DocumentsContract
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Image
@@ -38,11 +44,15 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -102,7 +112,9 @@ data class FolderSuggestion(
     val icon: ImageVector,
     val iconColor: Color,
     var grantedUri: Uri? = null,
-    var isSelected: Boolean = false
+    var isSelected: Boolean = false,
+    val isCustom: Boolean = false,
+    val id: String = UUID.randomUUID().toString()
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,6 +152,13 @@ fun SetWizardScreen(
                 isSelected = true
             ),
             FolderSuggestion(
+                label = "Downloads",
+                description = "Downloaded files, PDFs & installers",
+                icon = Icons.Outlined.Download,
+                iconColor = Color(0xFF0284C7),
+                isSelected = false
+            ),
+            FolderSuggestion(
                 label = "Documents",
                 description = "Local documents and PDFs",
                 icon = Icons.Outlined.Description,
@@ -147,14 +166,33 @@ fun SetWizardScreen(
                 isSelected = false
             ),
             FolderSuggestion(
+                label = "Music & Audio",
+                description = "Music, podcasts & voice recordings",
+                icon = Icons.Outlined.AudioFile,
+                iconColor = Color(0xFFD97706),
+                isSelected = false
+            ),
+            FolderSuggestion(
+                label = "Movies & Videos",
+                description = "Recorded videos & screen captures",
+                icon = Icons.Outlined.Videocam,
+                iconColor = Color(0xFF7C3AED),
+                isSelected = false
+            ),
+            FolderSuggestion(
                 label = "WhatsApp Media",
-                description = "Received photos and documents",
-                icon = Icons.Outlined.Chat,
+                description = "Received photos, videos & notes",
+                icon = Icons.AutoMirrored.Outlined.Chat,
                 iconColor = Color(0xFF10B981),
                 isSelected = false
             )
         )
     }
+
+    val customFolders = remember { mutableStateListOf<FolderSuggestion>() }
+    var pendingCustomUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingCustomName by remember { mutableStateOf("") }
+    var showCustomFolderSheet by remember { mutableStateOf(false) }
 
     // Step 2 State: Vault destination
     var vaultTreeUri by remember { mutableStateOf<Uri?>(null) }
@@ -273,20 +311,171 @@ fun SetWizardScreen(
         }
     }
 
+    // Custom folder naming modal sheet
+    if (showCustomFolderSheet && pendingCustomUri != null) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                showCustomFolderSheet = false
+                pendingCustomUri = null
+            },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            shape = RoundedCornerShape(topStart = RadiusSheet, topEnd = RadiusSheet),
+            containerColor = colors.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 20.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.dock.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.FolderOpen,
+                            contentDescription = null,
+                            tint = colors.dock,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "Add Custom Folder",
+                            style = DockHeadline,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Choose a display label for this directory",
+                            style = DockBodySmall,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedTextField(
+                    value = pendingCustomName,
+                    onValueChange = { pendingCustomName = it },
+                    label = { Text("Folder Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.dock,
+                        focusedLabelColor = colors.dock,
+                        cursorColor = colors.dock
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        val name = pendingCustomName.trim().ifBlank { "Custom Folder" }
+                        customFolders.add(
+                            FolderSuggestion(
+                                label = name,
+                                description = "Custom directory · Access granted",
+                                icon = Icons.Outlined.FolderOpen,
+                                iconColor = Color(0xFF0EA5E9),
+                                grantedUri = pendingCustomUri,
+                                isSelected = true,
+                                isCustom = true
+                            )
+                        )
+                        showCustomFolderSheet = false
+                        pendingCustomUri = null
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.dock,
+                        contentColor = colors.onDock
+                    )
+                ) {
+                    Text("Add to Backup Set", style = DockBody.copy(fontWeight = FontWeight.Bold))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = {
+                        showCustomFolderSheet = false
+                        pendingCustomUri = null
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel", style = DockBodySmall.copy(color = colors.textSecondary))
+                }
+            }
+        }
+    }
+
     // SAF Tree pickers for source folders
     var activePickingIndex by remember { mutableIntStateOf(-1) }
     val sourcePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         if (uri != null && activePickingIndex in suggestions.indices) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (_: Exception) {}
+            }
             suggestions[activePickingIndex] = suggestions[activePickingIndex].copy(
                 grantedUri = uri,
                 isSelected = true
             )
+        }
+    }
+
+    // SAF Tree picker for Custom Folders
+    val customFolderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (_: Exception) {}
+            }
+
+            val docFile = DocumentFile.fromTreeUri(context, uri)
+            val detectedName = docFile?.name?.ifBlank { null }
+                ?: try {
+                    DocumentsContract.getTreeDocumentId(uri).substringAfterLast(':').substringAfterLast('/')
+                } catch (_: Exception) {
+                    "Custom Folder"
+                }
+
+            pendingCustomUri = uri
+            pendingCustomName = detectedName.ifBlank { "Custom Folder" }
+            showCustomFolderSheet = true
         }
     }
 
@@ -341,7 +530,8 @@ fun SetWizardScreen(
             ) {
                 when (currentStep) {
                     1 -> {
-                        val hasSelected = suggestions.any { it.isSelected && it.grantedUri != null }
+                        val hasSelected = suggestions.any { it.isSelected && it.grantedUri != null } ||
+                                customFolders.any { it.isSelected && it.grantedUri != null }
                         Button(
                             onClick = { currentStep = 2 },
                             enabled = hasSelected,
@@ -428,7 +618,8 @@ fun SetWizardScreen(
                                         keystoreWrappedMkHex = provisionedEncryption?.keystoreWrappedMkHex,
                                         verificationLevel = VerificationLevel.FULL_REREAD
                                     )
-                                    val chosenFolders = suggestions.filter { it.isSelected && it.grantedUri != null }.map {
+                                    val allChosen = (suggestions + customFolders).filter { it.isSelected && it.grantedUri != null }
+                                    val chosenFolders = allChosen.map {
                                         SourceFolder(
                                             id = UUID.randomUUID().toString(),
                                             setId = setId,
@@ -503,7 +694,14 @@ fun SetWizardScreen(
                             style = DockBodySmall,
                             color = colors.textSecondary
                         )
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "POPULAR FOLDERS",
+                            style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                            color = colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     items(suggestions.size) { index ->
@@ -529,6 +727,156 @@ fun SetWizardScreen(
                             trailingBadge = if (isGranted) "Granted ✓" else "Tap to Grant",
                             modifier = Modifier.padding(vertical = 5.dp)
                         )
+                    }
+
+                    if (customFolders.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "CUSTOM FOLDERS (${customFolders.size})",
+                                style = DockMono.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textTertiary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        items(customFolders.size) { index ->
+                            val custom = customFolders[index]
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (custom.isSelected) colors.dock else colors.outline.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable {
+                                        customFolders[index] = custom.copy(isSelected = !custom.isSelected)
+                                    },
+                                colors = CardDefaults.cardColors(containerColor = colors.surface)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(custom.iconColor.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = custom.icon,
+                                            contentDescription = null,
+                                            tint = custom.iconColor,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = custom.label,
+                                            style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                            color = colors.textPrimary
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Access granted · Ready for backup",
+                                            style = DockBodySmall,
+                                            color = colors.seal
+                                        )
+                                    }
+
+                                    Checkbox(
+                                        checked = custom.isSelected,
+                                        onCheckedChange = { checked ->
+                                            customFolders[index] = custom.copy(isSelected = checked)
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = colors.dock,
+                                            checkmarkColor = colors.onDock
+                                        )
+                                    )
+
+                                    IconButton(
+                                        onClick = { customFolders.removeAt(index) },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = "Remove folder",
+                                            tint = colors.textTertiary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // + Add Custom Folder action card
+                    item {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    width = 1.2.dp,
+                                    color = colors.dock.copy(alpha = 0.6f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable { customFolderPickerLauncher.launch(null) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (colors.isDark) Color(0xFF131D31) else Color(0xFFF0F7FF)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(colors.dock.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = null,
+                                        tint = colors.dock,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(14.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "+ Add Custom Folder",
+                                        style = DockBody.copy(fontWeight = FontWeight.Bold),
+                                        color = colors.dock
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Pick any directory on internal storage or SD card",
+                                        style = DockBodySmall,
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
 
@@ -950,6 +1298,7 @@ fun SetWizardScreen(
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
 
+                                val allChosen = (suggestions + customFolders).filter { it.isSelected && it.grantedUri != null }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         imageVector = Icons.Outlined.Folder,
@@ -959,13 +1308,13 @@ fun SetWizardScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Protected Folders",
+                                        "Protected Folders (${allChosen.size})",
                                         style = DockBody.copy(fontWeight = FontWeight.Bold),
                                         color = colors.textPrimary
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
-                                suggestions.filter { it.isSelected && it.grantedUri != null }.forEach {
+                                allChosen.forEach {
                                     Text(
                                         "  • ${it.label}",
                                         style = DockBodySmall.copy(fontWeight = FontWeight.Medium),
